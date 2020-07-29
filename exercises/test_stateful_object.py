@@ -32,3 +32,10 @@ def test_cannot_close_if_not_open():
     conn = Connection('host', 'port')
     with pytest.raises(ConnectionError):
         conn.close()
+
+def test_cannot_send_after_closing():
+    conn = Connection('host', 'port')
+    conn.connect()
+    conn.close()
+    with pytest.raises(ConnectionError):
+        conn.send('foo')

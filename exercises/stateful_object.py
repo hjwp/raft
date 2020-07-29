@@ -9,7 +9,7 @@ class ConnectionError(Exception):
 
 class Socket(Protocol):
 
-    def connect(self, host: str, port: int) -> Socket:
+    def connect(self, host: str, port: int) -> OpenSocket:
         ...
 
     def send(self, msg: bytes) -> int:
@@ -18,7 +18,7 @@ class Socket(Protocol):
     def recv(self, maxbytes: int) -> bytes:
         ...
 
-    def close(self) -> None:
+    def close(self) -> ClosedSocket:
         ...
 
 
@@ -55,6 +55,7 @@ class OpenSocket:
 
     def close(self):
         self._sock.close()
+        return ClosedSocket()
 
 
 class Connection:
@@ -74,4 +75,4 @@ class Connection:
         return self.sock.recv(maxbytes)
 
     def close(self):
-        self.sock.close()
+        self.sock = self.sock.close()
