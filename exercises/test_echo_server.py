@@ -117,3 +117,36 @@ def test_echo_server_large_message(server):
         assert data1[:10] == b'->' + msg[:8]
         # print(data1)
         assert len(data1) == len(msg) + 2
+
+import threading
+from concurrent.futures import ThreadPoolExecutor, wait
+
+def send_1000_messages(job_no, port, done, errors):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        connect_tenaciously(s, port)
+        for i in range(1_000):
+            msg = f'job {job_no} thread {threading.get_ident()} message {i}'
+            send_message(s, msg.encode())
+            result = recv_message(s)
+            if result != b'->' + msg.encode():
+                errors.append(f'Error, {result} != b->{msg}')
+            else:
+                done.append(msg)
+
+
+
+def test_lots_of_messages(server):
+    pool = ThreadPoolExecutor(max_workers=100)
+    done = []
+    errors = []
+    jobs = []
+    for i in range(1000):
+        jobs.append(
+            pool.submit(send_1000_messages, i, server.port, done, errors)
+        )
+    wait(jobs)
+    for job in jobs:
+        assert job.exception() is None
+    assert errors == []
+    assert len(done) == 1_000_000
+
