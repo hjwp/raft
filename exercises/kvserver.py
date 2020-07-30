@@ -23,8 +23,9 @@ def kvget(key):
     )
 
 def kvset(key, val):
+    print('setting', key, 'to', val)
     LOG.append(Set(key, val))
-    print('getting', key)
+    raise Exception('arg')
 
 
 def service_request(req):
@@ -36,6 +37,7 @@ def service_request(req):
     if cmd == "GET":
         [key] = rest
         return kvget(key)
+    # TODO: use Json to be able to return out-of-band stuff, eg errors.
     return None
 
 
@@ -53,7 +55,7 @@ def handle_kv_requests(conn, remote_port):
             result = service_request(data.decode())
             conn.sendall(result.encode())
 
-def main(port):
+def main(port: int):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         # need to call both bind() and listen(), otherwise
         # client will see `ConnectionRefusedError`

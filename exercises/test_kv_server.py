@@ -58,3 +58,6 @@ def test_single_client_get_set(server):
         assert data == b'OK'
         s.sendall(b'GET,foo')
         data = s.recv(1024)
+
+
+# TODO: delete, multiple parallel clients.
