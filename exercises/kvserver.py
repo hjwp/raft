@@ -45,7 +45,7 @@ def service_request(req):
 
 def handle_kv_requests(conn, remote_port):
     with conn:
-        print('starting echo server for connection', remote_port)
+        print('starting kv handler for connection', remote_port)
         while True:
             data = conn.recv(1024)
             if not data:
