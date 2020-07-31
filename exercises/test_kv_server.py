@@ -40,18 +40,40 @@ def test_single_client_get_set(server):
         assert data == b'OK'
         s.sendall(b'GET,foo')
         data = s.recv(1024)
-        assert data == b'1'
+        assert data == b'foo=1'
         s.sendall(b'SET,foo,3')
         data = s.recv(1024)
         assert data == b'OK'
         s.sendall(b'GET,foo')
         data = s.recv(1024)
+        assert data == b'foo=3'
 
 
-def test_single_client_delete_and_get_unknown(server):
+def test_single_client_get_unknown(server):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        connect_tenaciously(s, server.port)
+        s.sendall(b'GET,foo')
+        data = s.recv(1024)
+        assert data == b'KEY foo IS UNSET'
+
+
+def test_single_client_bad_command(server):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        connect_tenaciously(s, server.port)
+        s.sendall(b'BLARGLE,foo')
+        data = s.recv(1024)
+        assert data == b'ERROR CMD=BLARGLE NOT RECOGNISED'
+
+
+def test_single_client_delete(server):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         connect_tenaciously(s, server.port)
         s.sendall(b'SET,foo,1')
         data = s.recv(1024)
         assert data == b'OK'
-        pytest.fail('todo')
+        s.sendall(b'DELETE,foo')
+        data = s.recv(1024)
+        assert data == b'OK'
+        s.sendall(b'GET,foo')
+        data = s.recv(1024)
+        assert data == b'KEY foo IS UNSET'
