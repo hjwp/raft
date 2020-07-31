@@ -8,7 +8,7 @@ from pathlib import Path
 from random import randint
 
 import pytest
-from echoserver import HOST, send_message, recv_message
+from kvserver import HOST, connect_tenaciously
 
 
 PORTS = [randint(2000, 9999) for _ in range(100)]
@@ -32,18 +32,6 @@ def server():
     server.process.wait()
 
 
-def connect_tenaciously(s, port):
-    tries_left = 10
-    while tries_left:
-        try:
-            print('connection attempt', 11-tries_left)
-            s.connect((HOST, port))
-            return s
-        except ConnectionRefusedError:
-            tries_left -= 1
-            time.sleep(0.05)
-
-
 def test_single_client_get_set(server):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         connect_tenaciously(s, server.port)
@@ -60,4 +48,10 @@ def test_single_client_get_set(server):
         data = s.recv(1024)
 
 
-# TODO: delete, multiple parallel clients.
+def test_single_client_delete_and_get_unknown(server):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        connect_tenaciously(s, server.port)
+        s.sendall(b'SET,foo,1')
+        data = s.recv(1024)
+        assert data == b'OK'
+        pytest.fail('todo')

@@ -1,15 +1,41 @@
 from typing import List
 import socket
 import threading
+import time
 import sys
 from dataclasses import dataclass
 
 HOST = '127.0.0.1'
 
-LOG = []   # type: List[Set]
+LOG = []   # type: List[SetCommand]
+
+
+
+def connect_tenaciously(s, port):
+    tries_left = 10
+    while tries_left:
+        try:
+            print('connection attempt', 11-tries_left)
+            s.connect((HOST, port))
+            return s
+        except ConnectionRefusedError:
+            tries_left -= 1
+            time.sleep(0.05)
+
+
+class KVClient:
+
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+
+    def __enter__():
+        pass
+
+
 
 @dataclass
-class Set:
+class SetCommand:
     key: str
     val: str
 
@@ -24,8 +50,7 @@ def kvget(key):
 
 def kvset(key, val):
     print('setting', key, 'to', val)
-    LOG.append(Set(key, val))
-    raise Exception('arg')
+    LOG.append(SetCommand(key, val))
 
 
 def service_request(req):
