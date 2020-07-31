@@ -12,28 +12,6 @@ LOG = []   # type: List[SetCommand]
 
 
 
-def connect_tenaciously(s, port):
-    tries_left = 10
-    while tries_left:
-        try:
-            print('connection attempt', 11-tries_left)
-            s.connect((HOST, port))
-            return s
-        except ConnectionRefusedError:
-            tries_left -= 1
-            time.sleep(0.05)
-
-
-class KVClient:
-
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
-
-    def __enter__():
-        pass
-
-
 
 @dataclass
 class SetCommand:
