@@ -1,5 +1,13 @@
 import time
 from socket import socket
+from colorama import Style
+
+class ConnectionClosed(ConnectionError):
+    pass
+
+
+def _log(msg):
+    print(f'{Style.DIM}[transport] {msg}{Style.RESET_ALL}')
 
 HOST = '127.0.0.1'
 
@@ -20,7 +28,10 @@ def _recv_exactly(sock: socket, num_bytes: int) -> str:
     return msg.decode()
 
 def recv_message(sock: socket) -> str:
-    expected_size = int(_recv_exactly(sock, 12))
+    try:
+        expected_size = int(_recv_exactly(sock, 12))
+    except EOFError:
+        raise ConnectionClosed('Client disconnected')
     return _recv_exactly(sock, expected_size)
 
 
