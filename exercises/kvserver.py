@@ -1,13 +1,9 @@
-# pylint: disable=broad-except
 from __future__ import annotations
 from typing import List, Optional
 import socket
 import threading
 import sys
 from dataclasses import dataclass
-import sys
-from itertools import count
-import trio
 
 HOST = '127.0.0.1'
 
@@ -58,23 +54,40 @@ def service_request(req: str):
     return f"ERROR CMD={cmd} NOT RECOGNISED"
 
 
-HOST = '127.0.0.1'
-CONNECTION_COUNTER = count()
 
-async def kv_server(server_stream):
-    ident = next(CONNECTION_COUNTER)
-    print(f"kv server {ident}: started")
-    try:
-        async for data in server_stream:
-            print("echo_server {ident}: received data {data!r}")
+
+def handle_kv_requests(conn, remote_port):
+    with conn:
+        print('starting kv handler for connection', remote_port)
+        while True:
+            data = conn.recv(1024)
+            if not data:
+                print('ending server for connection', remote_port)
+                return
+            print(f'received message {data}')
             result = service_request(data.decode())
-            await server_stream.send_all(result.encode())
-        print(f"echo_server {ident}: connection closed")
-    except Exception as exc:
-        print(f"echo_server {ident}: crashed: {exc!r}")
+            conn.sendall(result.encode())
 
-async def main(port: int):
-    await trio.serve_tcp(kv_server, port)
+def main(port: int):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        # need to call both bind() and listen(), otherwise
+        # client will see `ConnectionRefusedError`
+        # print('binding to', port, '\n\t', s)
+        print('binding to', port)
+        s.bind((HOST, port))  # may return OSError 98, address already in use
+        print('listening on', port)
+        s.listen()
+        print("waiting to accept connection on", port)
+        threads = []
+        while True:
+            conn, (_, remote_port) = s.accept()  # this hangs until someone connects
+            print('got connection to', port, 'from port', remote_port)
+            thread = threading.Thread(
+                target=handle_kv_requests,
+                args=(conn, remote_port)
+            )
+            threads.append(thread)
+            thread.start()
 
 if __name__ == '__main__':
-    trio.run(main, int(sys.argv[1]))
+    main(int(sys.argv[1]))
