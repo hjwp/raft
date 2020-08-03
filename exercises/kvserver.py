@@ -4,11 +4,9 @@ import socket
 import threading
 import sys
 from dataclasses import dataclass
-
-HOST = '127.0.0.1'
+from transport import HOST, send_message, recv_message
 
 LOG = []   # type: List[SetCommand]
-
 
 
 
@@ -35,7 +33,7 @@ def kvdelete(key: str) -> None:
     LOG.append(SetCommand(key, None))
 
 
-def service_request(req: str):
+def service_request(req: str) -> str:
     cmd, *rest = req.split(',')
     if cmd == "SET":
         key, val = rest
@@ -56,19 +54,20 @@ def service_request(req: str):
 
 
 
-def handle_kv_requests(conn, remote_port):
+def handle_kv_requests(conn: socket.socket, remote_port: int) -> None:
     with conn:
         print('starting kv handler for connection', remote_port)
         while True:
-            data = conn.recv(1024)
+            data = recv_message(conn)
             if not data:
                 print('ending server for connection', remote_port)
                 return
-            print(f'received message {data}')
-            result = service_request(data.decode())
-            conn.sendall(result.encode())
+            print(f'received message {data!r}')
+            result = service_request(data)
+            send_message(conn, result)
 
-def main(port: int):
+
+def main(port: int) -> None:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         # need to call both bind() and listen(), otherwise
         # client will see `ConnectionRefusedError`

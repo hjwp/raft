@@ -2,35 +2,24 @@
 import signal
 import socket
 import subprocess
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from random import randint
-from typing import Optional
+from typing import List
 
 import pytest
-from kvserver import HOST
+from transport import connect_tenaciously, HOST, send_message, recv_message
 
-
-def connect_tenaciously(s, port, host=HOST):
-    tries_left = 10
-    while tries_left:
-        try:
-            print('connection attempt', 11-tries_left)
-            s.connect((HOST, port))
-            return s
-        except ConnectionRefusedError:
-            tries_left -= 1
-            time.sleep(0.05)
 
 PORTS = [randint(2000, 9999) for _ in range(100)]
+
 
 @dataclass
 class Server:
     process: subprocess.Popen
     port: int
 
-def _start_server(port):
+def _start_server(port: int) -> Server:
     server_path = Path(__file__).parent / 'kvserver.py'
     p = subprocess.Popen(f'python -u {server_path} {port}'.split())
     return Server(process=p, port=port)
@@ -47,53 +36,53 @@ def server():
 def test_single_client_get_set(server):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         connect_tenaciously(s, server.port)
-        s.sendall(b'SET,foo,1')
-        data = s.recv(1024)
-        assert data == b'OK'
-        s.sendall(b'GET,foo')
-        data = s.recv(1024)
-        assert data == b'foo=1'
-        s.sendall(b'SET,foo,3')
-        data = s.recv(1024)
-        assert data == b'OK'
-        s.sendall(b'GET,foo')
-        data = s.recv(1024)
-        assert data == b'foo=3'
+        send_message(s, 'SET,foo,1')
+        data = recv_message(s)
+        assert data == 'OK'
+        send_message(s, 'GET,foo')
+        data = recv_message(s)
+        assert data == 'foo=1'
+        send_message(s, 'SET,foo,3')
+        data = recv_message(s)
+        assert data == 'OK'
+        send_message(s, 'GET,foo')
+        data = recv_message(s)
+        assert data == 'foo=3'
 
 
 def test_single_client_get_unknown(server):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         connect_tenaciously(s, server.port)
-        s.sendall(b'GET,foo')
-        data = s.recv(1024)
-        assert data == b'KEY foo IS UNSET'
+        send_message(s, 'GET,foo')
+        data = recv_message(s)
+        assert data == 'KEY foo IS UNSET'
 
 
 def test_single_client_bad_command(server):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         connect_tenaciously(s, server.port)
-        s.sendall(b'BLARGLE,foo')
-        data = s.recv(1024)
-        assert data == b'ERROR CMD=BLARGLE NOT RECOGNISED'
+        send_message(s, 'BLARGLE,foo')
+        data = recv_message(s)
+        assert data == 'ERROR CMD=BLARGLE NOT RECOGNISED'
 
 
 def test_single_client_delete(server):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         connect_tenaciously(s, server.port)
-        s.sendall(b'SET,foo,1')
-        data = s.recv(1024)
-        assert data == b'OK'
-        s.sendall(b'DELETE,foo')
-        data = s.recv(1024)
-        assert data == b'OK'
-        s.sendall(b'GET,foo')
-        data = s.recv(1024)
-        assert data == b'KEY foo IS UNSET'
+        send_message(s, 'SET,foo,1')
+        data = recv_message(s)
+        assert data == 'OK'
+        send_message(s, 'DELETE,foo')
+        data = recv_message(s)
+        assert data == 'OK'
+        send_message(s, 'GET,foo')
+        data = recv_message(s)
+        assert data == 'KEY foo IS UNSET'
 
 
 class KVClient:
 
-    def __init__(self, host:str, port:int):
+    def __init__(self, host: str, port: int):
         self.host = host
         self.port = port
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -105,24 +94,24 @@ class KVClient:
     def __exit__(self, *args):
         self._sock.close()
 
-    def get(self, key:str):
-        self._sock.sendall(f'GET,{key}'.encode())
-        response = self._sock.recv(1024).decode()
+    def get(self, key: str):
+        send_message(self._sock, f'GET,{key}')
+        response = recv_message(self._sock)
         if response == f'KEY {key} IS UNSET':
             return None
         nothing, _, val = response.partition(f'{key}=')
         assert nothing == ''
         return val
 
-    def set(self, key:str, val:str) -> None:
-        self._sock.sendall(f'SET,{key},{val}'.encode())
-        response = self._sock.recv(1024)
-        assert response == b'OK'
+    def set(self, key: str, val: str) -> None:
+        send_message(self._sock, f'SET,{key},{val}')
+        response = recv_message(self._sock)
+        assert response == 'OK'
 
-    def delete(self, key:str) -> None:
-        self._sock.sendall(f'DELETE,{key}'.encode())
-        response = self._sock.recv(1024)
-        assert response == b'OK'
+    def delete(self, key: str) -> None:
+        send_message(self._sock, f'DELETE,{key}')
+        response = recv_message(self._sock)
+        assert response == 'OK'
 
 
 
@@ -132,6 +121,12 @@ def test_kvclient_get_set(server):
         assert client.get('bar') == '1'
         client.set('bar', 3)
         assert client.get('bar') == '3'
+
+def test_kvclient_two_sets_in_a_row(server):
+    with KVClient(HOST, server.port) as client:
+        client.set('bar', 1)
+        client.set('bar', 2)
+        assert client.get('bar') == '2'
 
 
 def test_kvclient_unknown_and_delete(server):
@@ -143,9 +138,9 @@ def test_kvclient_unknown_and_delete(server):
         assert client.get('baz') is None
 
 
+# pylint: disable=wrong-import-order, wrong-import-position
 import random
-import threading
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor, wait, Future
 
 KEYS = 'foo bar baz cromulent cabbages monkey'.split()
 
@@ -161,12 +156,13 @@ def do_gets_and_sets(job_no, port, done, errors, history):
             errors.append(f'{key}={resp} did not equal expected: {val}')
         done.append(job_no)
 
+
 def test_lots_of_kvclients_in_parallel(server):
     pool = ThreadPoolExecutor(max_workers=100)
-    done = []
-    errors = []
-    jobs = []
-    history = []
+    done = []  # type: List[str]
+    errors = []  # type: List[str]
+    jobs = []  # type: List[Future]
+    history = []  # type: List[str]
     for i in range(100):
         jobs.append(
             pool.submit(do_gets_and_sets, i, server.port, done, errors, history)
