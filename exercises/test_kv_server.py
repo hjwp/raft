@@ -147,26 +147,41 @@ import random
 import threading
 from concurrent.futures import ThreadPoolExecutor, wait
 
-def do_gets_and_sets(job_no, port, done, errors):
+KEYS = 'foo bar baz cromulent cabbages monkey'.split()
+
+def do_gets_and_sets(job_no, port, done, errors, history):
     with KVClient(HOST, port) as client:
-        key = random.choice('foo bar baz cromulent cabbages monkey')
+        key = random.choice(KEYS)
         val = str(random.randint(1, 10000))
         client.set(key, val)
-        # TODO
+        history.append(f'set {key}={val}')
+        resp = client.get(key)
+        history.append(f'read {key}={val}')
+        if resp != val:
+            errors.append(f'{key}={resp} did not equal expected: {val}')
+        done.append(job_no)
 
 def test_lots_of_kvclients_in_parallel(server):
     pool = ThreadPoolExecutor(max_workers=100)
     done = []
     errors = []
     jobs = []
+    history = []
     for i in range(100):
         jobs.append(
-            pool.submit(do_gets_and_sets, i, server.port, done, errors)
+            pool.submit(do_gets_and_sets, i, server.port, done, errors, history)
         )
     wait(jobs)
     for job in jobs:
         assert job.exception() is None
-    assert errors == []
-    assert len(done) == 1_000_000
-
-
+    assert len(done) == 100
+    for error in errors:
+        print('*' * 80)
+        key = error.split('=')[0]
+        error_read = error.split(' did not equal ')[0]
+        error_val = error_read.split('=')[1]
+        print(f'*** debuggging {error} ***')
+        print('\n'.join(l for l in history if key in l))
+        read_pos = history.index(f'read {error_read}')
+        write_pos = history.index(f'set {key}={error_val}')
+        assert write_pos < read_pos
