@@ -11,7 +11,6 @@ STATE_CYCLE = (
     (AMBER, RED, 5),
     (RED, GREEN, 60),
     (RED, AMBER, 5),
-    (GREEN, RED, 30),
 )
 
 
@@ -21,17 +20,20 @@ class TrafficLight:
     ew: str
     time_til_next: int
 
-    def __init__(self) -> None:
+    def __init__(self, current_time: float = None) -> None:
+        if current_time is None:
+            self.current_time = time.time()
         self._cycle = cycle(STATE_CYCLE)
         self.next()
 
     def next(self) -> None:
-        self._last_cycle_time = time.time()
         self.ns, self.ew, self.time_til_next = next(self._cycle)
 
-    def tick(self) -> None:
+    def handle_clock_tick(self) -> None:
         self.time_til_next -= 1
+        if self.time_til_next <= 0:
+            self.next()
 
     def push_button(self) -> None:
         if self.ns == RED and self.ew == GREEN:
-            pass
+            self.time_til_next = max(0, self.time_til_next - 30)
