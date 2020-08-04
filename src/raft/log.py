@@ -5,10 +5,20 @@ from dataclasses import dataclass
 @dataclass
 class Entry:
     term: int
-    command: str
+    cmd: str
 
 
 class Log(Protocol):
+
+    @property
+    def lastLogIndex(self) -> int:
+        """1-based index of latest entry"""
+        ...
+
+    @property
+    def last_log_term(self) -> int:
+        """term of latest entry"""
+        ...
 
     def check_log(self, prevLogIndex: int, prevLogTerm: int) -> bool:
         ...
@@ -40,6 +50,16 @@ class InMemoryLog:
         """1-based index. truncates any after"""
         self._log = self._log[:index - 1] + [entry]
 
+    @property
+    def lastLogIndex(self) -> int:
+        return len(self._log)
+
+    @property
+    def last_log_term(self) -> int:
+        if len(self._log) == 0:
+            return 0
+        return self._entry_at(self.lastLogIndex).term
+
     def check_log(self, prevLogIndex: int, prevLogTerm: int):
         """check whether prevLogIndex and prevLogTerm match.  1-based index"""
         if prevLogIndex == 0:
@@ -55,7 +75,7 @@ class InMemoryLog:
         entry: Entry,
         prevLogIndex: int,  # 1-based
         prevLogTerm: int,
-        leaderCommit: int,  # 1-based, ignored for now
+        leaderCommit: int,  # 1-based, ignored for now.  # TODO: remove?
     ) -> bool:
         if not self.check_log(prevLogIndex, prevLogTerm):
             return False
