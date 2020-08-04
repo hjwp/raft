@@ -18,7 +18,7 @@ class Server:
 
 class RaftNetwork(Protocol):
 
-    def get_messages(self) -> List[Message]:
+    def get_messages(self, to: str) -> List[Message]:
         ...
 
     def dispatch(self, msg: Message) -> None:
@@ -35,7 +35,7 @@ class RaftTCPNetwork:
         S4 = Server('S4', '', 16004)
         S5 = Server('S5', '', 16005)
 
-    def get_messages(self) -> List[Message]:
+    def get_messages(self, to: str) -> List[Message]:
         ...
 
     def dispatch(self, msg: Message) -> None:

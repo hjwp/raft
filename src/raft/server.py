@@ -1,7 +1,10 @@
 from typing import Dict, List, Optional
 from raft.log import Log, Entry
 from raft.messages import (
-    Message, AppendEntries, AppendEntriesResponse, ClientSetCommand
+    Message,
+    AppendEntries,
+    AppendEntriesResponse,
+    ClientSetCommand,
 )
 
 
@@ -29,29 +32,37 @@ class Server:
 
 
 class Follower(Server):
-
     def handle_message(self, msg: Message) -> None:
         if isinstance(msg.cmd, AppendEntries):
             self._handle_append_entries(frm=msg.frm, cmd=msg.cmd)
 
-    def _handle_append_entries(self, frm:str, cmd: AppendEntries) -> None:
+    def _handle_append_entries(self, frm: str, cmd: AppendEntries) -> None:
         for entry in cmd.entries:
-            success = self.log.add_entry(entry, cmd.prevLogIndex, cmd.prevLogTerm, cmd.leaderCommit)
+            success = self.log.add_entry(
+                entry, cmd.prevLogIndex, cmd.prevLogTerm, cmd.leaderCommit
+            )
             if not success:
                 # TODO:
                 pass
-        self.outbox.append(Message(
-            frm=self.name,
-            to=frm,
-            cmd=AppendEntriesResponse(
-                frm=self.name, term=self.currentTerm, success=True
+        self.outbox.append(
+            Message(
+                frm=self.name,
+                to=frm,
+                cmd=AppendEntriesResponse(
+                    frm=self.name, term=self.currentTerm, success=True
+                ),
             )
-        ))
+        )
 
 
 class Leader(Server):
     def __init__(
-        self, name: str, peers: List[str], log: Log, currentTerm: int, votedFor: str
+        self,
+        name: str,
+        peers: List[str],
+        log: Log,
+        currentTerm: int,
+        votedFor: Optional[str],
     ):
         super().__init__(name, log, currentTerm, votedFor)
         self.peers = peers
@@ -63,7 +74,6 @@ class Leader(Server):
         self.matchIndex = {
             server_name: 0 for server_name in self.peers
         }  # type: Dict[str, int]
-
 
     def handle_message(self, msg: Message) -> None:
         if isinstance(msg.cmd, ClientSetCommand):
@@ -84,6 +94,4 @@ class Leader(Server):
             leaderCommit=0,
             entries=[new_entry],
         )
-        self.outbox.extend(
-            Message(frm=self.name, to=s, cmd=ae) for s in self.peers
-        )
+        self.outbox.extend(Message(frm=self.name, to=s, cmd=ae) for s in self.peers)

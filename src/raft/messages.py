@@ -28,4 +28,4 @@ class AppendEntriesResponse:
 class Message:
     frm: str
     to: str
-    cmd: Union[AppendEntries, AppendEntriesResponse]
+    cmd: Union[ClientSetCommand, AppendEntries, AppendEntriesResponse]

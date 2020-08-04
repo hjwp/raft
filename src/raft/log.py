@@ -32,6 +32,9 @@ class Log(Protocol):
     ) -> bool:
         ...
 
+    def read(self) -> List[Entry]:
+        ...
+
 
 class InMemoryLog:
 
