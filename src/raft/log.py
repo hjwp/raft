@@ -1,5 +1,6 @@
-from typing import List, Optional
+from typing import List, Protocol
 from dataclasses import dataclass
+from pathlib import Path
 
 @dataclass
 class Entry:
@@ -7,8 +8,20 @@ class Entry:
     command: str
 
 
-class Log(typing.Protocol):
-    def 
+class Log(Protocol):
+
+    def check_log(self, prevLogIndex: int, prevLogTerm: int) -> bool:
+        ...
+
+    def add_entry(
+        self,
+        entry: Entry,
+        prevLogIndex: int,
+        prevLogTerm: int,
+        leaderCommit: int,
+    ) -> bool:
+        ...
+
 
 class InMemoryLog:
 
@@ -76,3 +89,24 @@ class InMemoryLog:
 
     def read(self) -> List[Entry]:
         return self._log
+
+
+class PersistentLog:
+
+    def __init__(self, path: Path):
+        self.log = InMemoryLog([])
+
+    def add_entry(
+        self,
+        entry: Entry,
+        prevLogIndex: int,
+        prevLogTerm: int,
+        leaderCommit: int,
+    ) -> bool:
+        return self.log.add_entry(entry, prevLogIndex, prevLogTerm, leaderCommit)
+
+    def read(self):
+        return self.log.read()
+
+    def flush(self):
+        pass

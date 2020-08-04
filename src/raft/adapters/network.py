@@ -1,8 +1,8 @@
 from enum import Enum
-from typing import Protocol, Dict
+from typing import Any, Dict, Protocol
 from dataclasses import dataclass
 
-Json = Dict[str, ...]
+Json = Dict[str, Any]
 
 
 @dataclass
