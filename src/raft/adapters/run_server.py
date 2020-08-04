@@ -1,11 +1,11 @@
 import time
-from raft.adapters.network import RaftNetwork
+from raft.adapters.network import RaftNetwork, RaftTCPNetwork
 from raft.server import Server
 from raft.log import InMemoryLog
 
 def run_server(name: str):
     log = InMemoryLog([])  # load from persistent storage at some point
-    raftnet = RaftNetwork(name)  #  may need some info about ports, tbc
+    raftnet = RaftTCPNetwork()  #  may need some info about ports, tbc
     server = Server(name, log=log, currentTerm=0, votedFor=None)
     while True:
         clock_tick(server, raftnet)
