@@ -1,14 +1,15 @@
-import os
+# pylint: disable=redefined-outer-name
 from pathlib import Path
 import tempfile
 import pytest
-from raft.log import Log, PersistentLog, Entry
+from raft.log import Log
+from raft.adapters.persistent_log import PersistentLog, Entry
 
 @pytest.fixture
 def temp_path():
     tf = Path(tempfile.NamedTemporaryFile().name)
-    return tf
-    tf.remove()
+    yield tf
+    tf.unlink()
 
 
 
