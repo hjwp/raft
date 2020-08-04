@@ -25,6 +25,10 @@ class InMemoryLog:
         """return 1-based index entry"""
         return self._log[index - 1]
 
+    def _replace_entry(self, index: int, entry: Entry) -> None:
+        assert self._has_entry_at(index)
+        self._log[index - 1] = entry
+
     def add_entry(
         self,
         entry: Entry,
@@ -40,12 +44,15 @@ class InMemoryLog:
             self._log.append(entry)
             return True
 
-        if self._has_entry_at(new_index) and self._entry_at(new_index) == entry:
-            return True
 
         prev_entry = self._entry_at(prevLogIndex)
         if prev_entry.term != prevLogTerm:
             return False
+
+        if self._has_entry_at(new_index):
+            # TODO: should probably not allow replacing if not at end
+            self._replace_entry(new_index, entry)
+            return True
 
         self._log.append(entry)
         return True
