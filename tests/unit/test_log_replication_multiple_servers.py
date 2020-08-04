@@ -35,7 +35,7 @@ def test_replication_one_server():
 
     clock_tick(leader, raftnet)
     clock_tick(follower, raftnet)
-    assert follower.log.read()[-1].cmd == client_set.cmd.cmd
+    assert follower.log.read()[-1].cmd == "foo=1"
 
 
 def test_replication_multiple_servers():
@@ -53,5 +53,5 @@ def test_replication_multiple_servers():
     clock_tick(leader, raftnet)
     clock_tick(f1, raftnet)
     clock_tick(f2, raftnet)
-    assert f1.log.read()[-1].cmd == client_set.cmd.cmd
-    assert f2.log.read()[-1].cmd == client_set.cmd.cmd
+    assert f1.log.read()[-1].cmd == "foo=1"
+    assert f2.log.read()[-1].cmd == "foo=1"

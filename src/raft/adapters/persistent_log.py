@@ -1,8 +1,9 @@
-from typing import List
 import json
-from pathlib import Path
-from raft.log import Entry, InMemoryLog
 from dataclasses import asdict
+from pathlib import Path
+from typing import List
+
+from raft.log import Entry, InMemoryLog
 
 
 class PersistentLog:
@@ -16,6 +17,17 @@ class PersistentLog:
                 Entry(**entry) for entry in json.loads(self.path.read_text())
             ]
         self.log = InMemoryLog(existing_entries)
+
+    @property
+    def lastLogIndex(self) -> int:
+        return self.log.lastLogIndex
+
+    @property
+    def last_log_term(self) -> int:
+        return self.log.last_log_term
+
+    def check_log(self, prevLogIndex: int, prevLogTerm: int) -> bool:
+        return self.log.check_log(prevLogIndex, prevLogTerm)
 
     def add_entry(
         self,

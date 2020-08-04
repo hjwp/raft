@@ -63,7 +63,7 @@ class InMemoryLog:
             return 0
         return self._entry_at(self.lastLogIndex).term
 
-    def check_log(self, prevLogIndex: int, prevLogTerm: int):
+    def check_log(self, prevLogIndex: int, prevLogTerm: int) -> bool:
         """check whether prevLogIndex and prevLogTerm match.  1-based index"""
         if prevLogIndex == 0:
             return True

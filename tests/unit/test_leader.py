@@ -4,7 +4,7 @@ from raft.messages import AppendEntries, Message, ClientSetCommand
 
 
 def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
-    peers = ("S2", "S3", "S4", "S5")
+    peers = ["S2", "S3", "S4", "S5"]
     log = InMemoryLog([])
     s = Leader(
         name="S1", peers=peers, log=log, currentTerm=1, votedFor=None
