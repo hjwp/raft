@@ -30,16 +30,17 @@ class Follower(Server):
 
     def handle_message(self, msg: Message) -> None:
         if isinstance(msg.cmd, AppendEntries):
-            self._handle_append_entries(msg.cmd)
+            self._handle_append_entries(frm=msg.frm, cmd=msg.cmd)
 
-    def _handle_append_entries(self, cmd: AppendEntries) -> None:
+    def _handle_append_entries(self, frm:str, cmd: AppendEntries) -> None:
         for entry in cmd.entries:
             success = self.log.add_entry(entry, cmd.prevLogIndex, cmd.prevLogTerm, cmd.leaderCommit)
             if not success:
                 # TODO:
                 pass
         self.outbox.append(Message(
-            to="S1",  # TODO: fix hardcode, shld be msg.from
+            frm=self.name,
+            to=frm,
             cmd=AppendEntriesResponse(
                 frm=self.name, term=self.currentTerm, success=True
             )
@@ -77,4 +78,6 @@ class Leader(Server):
             leaderCommit=0,
             entries=[new_entry],
         )
-        self.outbox.extend(Message(to=s, cmd=ae) for s in self.peers)
+        self.outbox.extend(
+            Message(frm=self.name, to=s, cmd=ae) for s in self.peers
+        )

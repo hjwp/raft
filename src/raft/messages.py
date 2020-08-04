@@ -21,5 +21,6 @@ class AppendEntriesResponse:
 
 @dataclass
 class Message:
+    frm: str
     to: str
     cmd: Union[AppendEntries, AppendEntriesResponse]

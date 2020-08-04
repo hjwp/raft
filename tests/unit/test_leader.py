@@ -21,6 +21,6 @@ def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
         entries=[expected_entry],
     )
     assert s.outbox == [
-        Message(to=s, cmd=expected_appendentries)
+        Message(frm="S1", to=s, cmd=expected_appendentries)
         for s in peers
     ]

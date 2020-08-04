@@ -9,6 +9,7 @@ def test_append_entries_adds_to_local_log_and_returns_response():
     new_entry = Entry(term=1, cmd="foo=bar")
     s.handle_message(
         Message(
+            frm="S1",
             to="S2",
             cmd=AppendEntries(
                 term=1,
@@ -22,4 +23,4 @@ def test_append_entries_adds_to_local_log_and_returns_response():
     )
     assert s.log.read() == [new_entry]
     expected_response = AppendEntriesResponse(frm="S2", term=1, success=True)
-    assert s.outbox == [Message(to="S1", cmd=expected_response)]
+    assert s.outbox == [Message(frm="S2", to="S1", cmd=expected_response)]
