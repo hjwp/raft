@@ -44,24 +44,6 @@ def test_cannot_add_if_prevLogTerm_does_not_Match():
     assert log.read() == [old_entry]
     assert result is False
 
-def test_idempotent_at_end():
-    old_entry = Entry(term=1, cmd="foo=1")
-    log = InMemoryLog([old_entry])
-    new_entry = Entry(term=1, cmd="foo=2")
-    log.add_entry(new_entry, prevLogIndex=1, prevLogTerm=1, leaderCommit=0)
-    result = log.add_entry(new_entry, prevLogIndex=1, prevLogTerm=1, leaderCommit=0)
-    assert log.read() == [old_entry, new_entry]
-    assert result is True
-
-
-def test_cannot_add_past_end():
-    old_entry = Entry(term=1, cmd="foo=1")
-    log = InMemoryLog([old_entry])
-    new_entry = Entry(term=1, cmd="foo=2")
-    result = log.add_entry(new_entry, prevLogIndex=2, prevLogTerm=1, leaderCommit=0)
-    assert log.read() == [old_entry]
-    assert result is False
-
 
 def test_cannot_add_if_prevLogTerm_does_not_match():
     old_entry = Entry(term=1, cmd="foo=1")
@@ -133,20 +115,6 @@ def test_prevLogIndex_zero_is_always_true():
     log = InMemoryLog([Entry(term=1, cmd='foo=1')])
     result = log.check_log(prevLogIndex=0, prevLogTerm=0)
     assert result is True
-
-
-def test_check_log_index_past_end():
-    old_entry = Entry(term=1, cmd="foo=1")
-    log = InMemoryLog([old_entry])
-    result = log.check_log(prevLogIndex=2, prevLogTerm=1)
-    assert result is False
-
-
-def test_prevLogTerm_does_not_Match():
-    old_entry = Entry(term=1, cmd="foo=1")
-    log = InMemoryLog([old_entry])
-    result = log.check_log(prevLogIndex=1, prevLogTerm=2)
-    assert result is False
 
 
 def test_check_log_index_past_end():
