@@ -24,5 +24,3 @@ def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
         Message(to=s, cmd=expected_appendentries)
         for s in peers
     ]
-
-

@@ -22,6 +22,17 @@ class RaftNetwork(Protocol):
         ...
 
 
+class RaftInMemoryNetowrk:
+    class Servers(Enum):
+        S1 = Server('S1', '', 1)
+        S2 = Server('S2', '', 2)
+        S3 = Server('S3', '', 3)
+        S4 = Server('S4', '', 4)
+        S5 = Server('S5', '', 5)
+
+
+
+
 class RaftTCPNetwork:
     class Servers(Enum):
         S1 = Server('S1', '', 16001)

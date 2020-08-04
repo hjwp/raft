@@ -8,6 +8,7 @@ class Server:
         self, name: str, log: Log, currentTerm: int, votedFor: Optional[str],
     ):
         self.name = name
+        self.outbox = []  # type: List[Message]
 
         # Raft persistent state
         self.log = log
@@ -17,6 +18,12 @@ class Server:
         # Raft volatile state
         self.commitIndex = 0
         self.lastApplied = 0
+
+    def handle_message(self, msg: Message):
+        ...
+
+    def clock_tick(self, now: float):
+        ...
 
 
 class Leader(Server):
@@ -33,7 +40,7 @@ class Leader(Server):
         self.matchIndex = {
             server_name: 0 for server_name in self.peers
         }  # type: Dict[str, int]
-        self.outbox = []  # type: List[Message]
+
 
     def handle_client_set(self, client_id: str, cmd: str):
         prevLogIndex = self.log.lastLogIndex
