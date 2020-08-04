@@ -81,19 +81,23 @@ def test_can_overwrite_one_if_prevLogTerm_matches():
     assert result is True
 
 
-def test_edge_case_cannot_ovewrite_zeroth_entry():
-    old_log = [Entry(term=1, command="foo=1"), Entry(term=1, command="foo=2")]
-    log = InMemoryLog(old_log)
-    new_entry = Entry(term=2, command="foo=3")
-    result = log.add_entry(new_entry, prevLogIndex=0, prevLogTerm=0, leaderCommit=0)
-    assert log.read() == old_log
-    assert result is False
-
-
-def test_edge_case_CAN_ovewrite_zeroth_entry_if_its_the_only_one():
+def test_edge_case_can_ovewrite_zeroth_entry_if_its_the_only_one():
     old_entry = Entry(term=1, command="foo=1")
     log = InMemoryLog([old_entry])
     new_entry = Entry(term=1, command="foo=2")
+    result = log.add_entry(new_entry, prevLogIndex=0, prevLogTerm=0, leaderCommit=0)
+    assert log.read() == [new_entry]
+    assert result is True
+
+
+def test_edge_case_can_ovewrite_zeroth_entry_and_all_following():
+    old_log = [
+        Entry(term=1, command="foo=1"),
+        Entry(term=1, command="foo=2"),
+        Entry(term=1, command="foo=3"),
+    ]
+    log = InMemoryLog(old_log)
+    new_entry = Entry(term=2, command="bar=1")
     result = log.add_entry(new_entry, prevLogIndex=0, prevLogTerm=0, leaderCommit=0)
     assert log.read() == [new_entry]
     assert result is True
@@ -110,3 +114,50 @@ def test_valid_overwrite_in_the_middle_of_the_log_kills_all_later_ones():
     result = log.add_entry(new_entry, prevLogIndex=1, prevLogTerm=1, leaderCommit=0)
     assert log.read() == [old_log[0], new_entry]
     assert result is True
+
+
+
+def test_check_log_happy_path():
+    old_entry = Entry(term=1, command="foo=1")
+    log = InMemoryLog([old_entry])
+    result = log.check_log(prevLogIndex=1, prevLogTerm=1)
+    assert result is True
+
+
+def test_check_log_when_empty():
+    log = InMemoryLog([])
+    result = log.check_log(prevLogIndex=0, prevLogTerm=0)
+    assert result is True
+
+def test_prevLogIndex_zero_is_always_true():
+    log = InMemoryLog([Entry(term=1, command='foo=1')])
+    result = log.check_log(prevLogIndex=0, prevLogTerm=0)
+    assert result is True
+
+
+def test_check_log_index_past_end():
+    old_entry = Entry(term=1, command="foo=1")
+    log = InMemoryLog([old_entry])
+    result = log.check_log(prevLogIndex=2, prevLogTerm=1)
+    assert result is False
+
+
+def test_prevLogTerm_does_not_Match():
+    old_entry = Entry(term=1, command="foo=1")
+    log = InMemoryLog([old_entry])
+    result = log.check_log(prevLogIndex=1, prevLogTerm=2)
+    assert result is False
+
+
+def test_check_log_index_past_end():
+    old_entry = Entry(term=1, command="foo=1")
+    log = InMemoryLog([old_entry])
+    result = log.check_log(prevLogIndex=2, prevLogTerm=1)
+    assert result is False
+
+
+def test_prevLogTerm_does_not_Match():
+    old_entry = Entry(term=1, command="foo=1")
+    log = InMemoryLog([old_entry])
+    result = log.check_log(prevLogIndex=1, prevLogTerm=2)
+    assert result is False

@@ -33,6 +33,21 @@ class InMemoryLog:
     def _truncate_after(self, index: int) -> None:
         self._log = self._log[:index]
 
+    def check_log(self,
+        prevLogIndex: int,  # 1-based
+        prevLogTerm: int,
+    ):
+        if prevLogIndex == 0:
+            return True
+        if not self._has_entry_at(prevLogIndex):
+            return False
+
+        prev_entry = self._entry_at(prevLogIndex)
+        if prev_entry.term != prevLogTerm:
+            return False
+
+        return True
+
     def add_entry(
         self,
         entry: Entry,
@@ -40,22 +55,16 @@ class InMemoryLog:
         prevLogTerm: int,
         leaderCommit: int,  # 1-based, ignored for now
     ) -> bool:
+        if not self.check_log(prevLogIndex, prevLogTerm):
+            return False
 
         if prevLogIndex == 0:
             if len(self._log) == 0:
                 self._log.append(entry)
-                return True
-            if len(self._log) == 1:
+            else:
                 self._replace_entry(1, entry)
-                return True
-            return  False
-
-        if not self._has_entry_at(prevLogIndex):
-            return False
-
-        prev_entry = self._entry_at(prevLogIndex)
-        if prev_entry.term != prevLogTerm:
-            return False
+                self._truncate_after(1)
+            return True
 
         new_index = prevLogIndex + 1
         if self._has_entry_at(new_index):
