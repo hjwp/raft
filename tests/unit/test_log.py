@@ -71,6 +71,7 @@ def test_cannot_add_if_prevLogTerm_does_not_match():
     assert log.read() == [old_entry]
     assert result is False
 
+
 def test_can_overwrite_one_if_prevLogTerm_matches():
     old_log = [Entry(term=1, command="foo=1"), Entry(term=1, command="foo=2")]
     log = InMemoryLog(old_log)
@@ -79,3 +80,20 @@ def test_can_overwrite_one_if_prevLogTerm_matches():
     assert log.read() == [old_log[0], new_entry]
     assert result is True
 
+
+def test_edge_case_cannot_ovewrite_zeroth_entry():
+    old_log = [Entry(term=1, command="foo=1"), Entry(term=1, command="foo=2")]
+    log = InMemoryLog(old_log)
+    new_entry = Entry(term=2, command="foo=3")
+    result = log.add_entry(new_entry, prevLogIndex=0, prevLogTerm=0, leaderCommit=0)
+    assert log.read() == old_log
+    assert result is False
+
+
+def test_edge_case_CAN_ovewrite_zeroth_entry_if_its_the_only_one():
+    old_entry = Entry(term=1, command="foo=1")
+    log = InMemoryLog([old_entry])
+    new_entry = Entry(term=1, command="foo=2")
+    result = log.add_entry(new_entry, prevLogIndex=0, prevLogTerm=0, leaderCommit=0)
+    assert log.read() == [new_entry]
+    assert result is True
