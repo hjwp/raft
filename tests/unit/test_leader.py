@@ -1,6 +1,6 @@
 from raft.server import Server, Leader
 from raft.log import InMemoryLog, Entry
-from raft.messages import AppendEntries, Message
+from raft.messages import AppendEntries, Message, ClientSetCommand
 
 
 def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
@@ -9,7 +9,7 @@ def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
     s = Leader(
         name="S1", peers=peers, log=log, currentTerm=1, votedFor=None
     )
-    s._handle_client_set("foo=bar")
+    s.handle_message(Message(frm='client.id', to='S1', cmd=ClientSetCommand('foo=bar')))
     expected_entry = Entry(term=1, cmd="foo=bar")
     assert s.log.read() == [expected_entry]
     expected_appendentries = AppendEntries(
