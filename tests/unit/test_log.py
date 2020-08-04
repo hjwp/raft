@@ -97,3 +97,16 @@ def test_edge_case_CAN_ovewrite_zeroth_entry_if_its_the_only_one():
     result = log.add_entry(new_entry, prevLogIndex=0, prevLogTerm=0, leaderCommit=0)
     assert log.read() == [new_entry]
     assert result is True
+
+
+def test_valid_overwrite_in_the_middle_of_the_log_kills_all_later_ones():
+    old_log = [
+        Entry(term=1, command="foo=1"),
+        Entry(term=1, command="foo=2"),
+        Entry(term=1, command="foo=3"),
+    ]
+    log = InMemoryLog(old_log)
+    new_entry = Entry(term=2, command="bar=1")
+    result = log.add_entry(new_entry, prevLogIndex=1, prevLogTerm=1, leaderCommit=0)
+    assert log.read() == [old_log[0], new_entry]
+    assert result is True

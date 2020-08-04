@@ -26,8 +26,12 @@ class InMemoryLog:
         return self._log[index - 1]
 
     def _replace_entry(self, index: int, entry: Entry) -> None:
+        """1-based"""
         assert self._has_entry_at(index)
         self._log[index - 1] = entry
+
+    def _truncate_after(self, index: int) -> None:
+        self._log = self._log[:index]
 
     def add_entry(
         self,
@@ -55,8 +59,8 @@ class InMemoryLog:
 
         new_index = prevLogIndex + 1
         if self._has_entry_at(new_index):
-            # TODO: should probably not allow replacing if not at end
             self._replace_entry(new_index, entry)
+            self._truncate_after(new_index)
             return True
 
         self._log.append(entry)
