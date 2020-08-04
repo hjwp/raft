@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 from raft.log import Log, Entry
-from raft.messages import Message, AppendEntries
+from raft.messages import Message, AppendEntries, AppendEntriesResponse
 
 
 class Server:
@@ -24,6 +24,26 @@ class Server:
 
     def clock_tick(self, now: float):
         ...
+
+
+class Follower(Server):
+
+    def handle_message(self, msg: Message) -> None:
+        if isinstance(msg.cmd, AppendEntries):
+            self._handle_append_entries(msg.cmd)
+
+    def _handle_append_entries(self, cmd: AppendEntries) -> None:
+        for entry in cmd.entries:
+            success = self.log.add_entry(entry, cmd.prevLogIndex, cmd.prevLogTerm, cmd.leaderCommit)
+            if not success:
+                # TODO:
+                pass
+        self.outbox.append(Message(
+            to="S1",  # TODO: fix hardcode, shld be msg.from
+            cmd=AppendEntriesResponse(
+                frm=self.name, term=self.currentTerm, success=True
+            )
+        ))
 
 
 class Leader(Server):

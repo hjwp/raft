@@ -13,6 +13,13 @@ class AppendEntries:
 
 
 @dataclass
+class AppendEntriesResponse:
+    frm: str
+    term: int
+    success: bool
+
+
+@dataclass
 class Message:
     to: str
-    cmd: Union[AppendEntries]
+    cmd: Union[AppendEntries, AppendEntriesResponse]
