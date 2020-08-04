@@ -21,7 +21,7 @@ class FakeRaftNetwork:
         self.messages.append(msg)
 
 
-def test_replication_one_server():
+def test_replication_one_server_simple_case():
     leader = Leader(
         name="S1", peers=["S2"], log=InMemoryLog([]), currentTerm=1, votedFor=None
     )
@@ -38,7 +38,7 @@ def test_replication_one_server():
     assert follower.log.read()[-1].cmd == "foo=1"
 
 
-def test_replication_multiple_servers():
+def test_replication_multiple_servers_simple_case():
     peers = ["S2", "S3"]
     leader = Leader(
         name="S1", peers=peers, log=InMemoryLog([]), currentTerm=1, votedFor=None
@@ -55,3 +55,12 @@ def test_replication_multiple_servers():
     clock_tick(f2, raftnet)
     assert f1.log.read()[-1].cmd == "foo=1"
     assert f2.log.read()[-1].cmd == "foo=1"
+
+
+def test_replication_backtracking():
+    assert 0, 'todo'
+
+    # IDEA:
+    while raftnet.messages:
+        for s in peers:
+            clock_tick(s, raftnet)

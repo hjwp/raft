@@ -24,3 +24,15 @@ def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
         Message(frm="S1", to=s, cmd=expected_appendentries)
         for s in peers
     ]
+
+
+def test_successful_appendentries_response_increments_matchindex():
+    assert 0, 'todo'
+
+def test_failed_appendentries_decrements_matchindex_and_adds_new_AppendEntries_to_outbox():
+    assert 0, 'todo'
+
+def test_successful_appendentries_response_when_follower_still_catching_up():
+    assert 0, 'todo'
+
+
