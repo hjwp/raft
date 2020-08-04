@@ -36,27 +36,18 @@ class InMemoryLog:
         """return 1-based index entry"""
         return self._log[index - 1]
 
-    def _replace_entry(self, index: int, entry: Entry) -> None:
-        """1-based"""
-        assert self._has_entry_at(index)
-        self._log[index - 1] = entry
+    def _replace_at(self, index: int, entry: Entry) -> None:
+        """1-based index. truncates any after"""
+        self._log = self._log[:index - 1] + [entry]
 
-    def _truncate_after(self, index: int) -> None:
-        self._log = self._log[:index]
-
-    def check_log(self,
-        prevLogIndex: int,  # 1-based
-        prevLogTerm: int,
-    ):
+    def check_log(self, prevLogIndex: int, prevLogTerm: int):
+        """check whether prevLogIndex and prevLogTerm match.  1-based index"""
         if prevLogIndex == 0:
             return True
         if not self._has_entry_at(prevLogIndex):
             return False
-
-        prev_entry = self._entry_at(prevLogIndex)
-        if prev_entry.term != prevLogTerm:
+        if self._entry_at(prevLogIndex).term != prevLogTerm:
             return False
-
         return True
 
     def add_entry(
@@ -68,22 +59,7 @@ class InMemoryLog:
     ) -> bool:
         if not self.check_log(prevLogIndex, prevLogTerm):
             return False
-
-        if prevLogIndex == 0:
-            if len(self._log) == 0:
-                self._log.append(entry)
-            else:
-                self._replace_entry(1, entry)
-                self._truncate_after(1)
-            return True
-
-        new_index = prevLogIndex + 1
-        if self._has_entry_at(new_index):
-            self._replace_entry(new_index, entry)
-            self._truncate_after(new_index)
-            return True
-
-        self._log.append(entry)
+        self._replace_at(prevLogIndex + 1, entry)
         return True
 
 
