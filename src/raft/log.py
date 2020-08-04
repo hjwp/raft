@@ -7,15 +7,13 @@ class Entry:
     command: str
 
 
+class Log(typing.Protocol):
+    def 
+
 class InMemoryLog:
 
     def __init__(self, log: List[Entry]) -> None:
         self._log = log
-
-    @property
-    def lastLogIndex(self):
-        """1-based"""
-        return len(self._log)
 
     def _has_entry_at(self, index: int) -> bool:
         """1-based"""
