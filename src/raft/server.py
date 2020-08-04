@@ -1,6 +1,8 @@
 from typing import Dict, List, Optional
 from raft.log import Log, Entry
-from raft.messages import Message, AppendEntries, AppendEntriesResponse
+from raft.messages import (
+    Message, AppendEntries, AppendEntriesResponse, ClientSetCommand
+)
 
 
 class Server:
@@ -63,7 +65,11 @@ class Leader(Server):
         }  # type: Dict[str, int]
 
 
-    def handle_client_set(self, client_id: str, cmd: str):
+    def handle_message(self, msg: Message) -> None:
+        if isinstance(msg.cmd, ClientSetCommand):
+            self._handle_client_set(cmd=msg.cmd.cmd)
+
+    def _handle_client_set(self, cmd: str):
         prevLogIndex = self.log.lastLogIndex
         prevLogTerm = self.log.last_log_term
         new_entry = Entry(term=self.currentTerm, cmd=cmd)

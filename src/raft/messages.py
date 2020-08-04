@@ -3,6 +3,11 @@ from typing import List, Union
 from raft.log import Entry
 
 @dataclass
+class ClientSetCommand:
+    cmd: str
+
+
+@dataclass
 class AppendEntries:
     term: int
     leaderId: str

@@ -9,7 +9,7 @@ def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
     s = Leader(
         name="S1", peers=peers, log=log, currentTerm=1, votedFor=None
     )
-    s.handle_client_set("client1", "foo=bar")
+    s._handle_client_set("foo=bar")
     expected_entry = Entry(term=1, cmd="foo=bar")
     assert s.log.read() == [expected_entry]
     expected_appendentries = AppendEntries(
