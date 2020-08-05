@@ -1,12 +1,10 @@
+import sys
 import time
-from raft.adapters.network import RaftNetwork, TCPRaftNet
-from raft.server import Server
 from raft.log import InMemoryLog
+from raft.adapters.network import RaftNetwork, TCPRaftNet
+from raft.server import Server, Follower
 
-def run_tcp_server(name: str):
-    log = InMemoryLog([])  # load from persistent storage at some point
-    raftnet = TCPRaftNet(name)
-    server = Server(name, log=log, now=time.time(), currentTerm=0, votedFor=None)
+def run_tcp_server(server: Server, raftnet: RaftNetwork):
     while True:
         clock_tick(server, raftnet, time.time())
         time.sleep(0.01)
@@ -20,3 +18,15 @@ def clock_tick(server: Server, raftnet: RaftNetwork, now: float):
     while server.outbox:
         m = server.outbox.pop(0)
         raftnet.dispatch(m)
+
+
+def _main(name: str) -> None:
+    raftnet = TCPRaftNet(name)
+    raftnet.start()
+    server = Follower(
+        name=name, log=InMemoryLog([]), now=time.time(), currentTerm=0, votedFor=None
+    )
+    run_tcp_server(server, raftnet)
+
+if __name__ == '__main__':
+    _main(sys.argv[1])

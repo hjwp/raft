@@ -1,22 +1,18 @@
+# pylint: disable=too-many-locals
 import time
 import socket
-import pytest
-from typing import List
-from raft.adapters.run_server import clock_tick
-from raft.adapters.network import RaftNetwork, TCPRaftNet
+import threading
+
+from raft.adapters.run_server import run_tcp_server
+from raft.adapters.network import TCPRaftNet
 from raft.adapters.transport import connect_tenaciously
 from raft.log import InMemoryLog, Entry
 from raft.messages import Message, ClientSetCommand
-from raft.server import Leader, Follower, Server
-
-def run_tcp_server(server: Server, raftnet: RaftNetwork):
-    while True:
-        clock_tick(server, raftnet, time.time())
-        time.sleep(0.01)
+from raft.server import Leader, Follower
 
 def test_replication_with_tcp_servers():
     networks = {
-        name: TCPRaftNet(name) 
+        name: TCPRaftNet(name)
         for name in TCPRaftNet.SERVERS
     }
     for net in networks.values():
@@ -57,18 +53,16 @@ def test_replication_with_tcp_servers():
     f1net = networks['S2']
     f2net = networks['S3']
     randomnet = networks['S5']
-
     randomnet.dispatch(client_set)
 
-    for i in range(1, 20):
-        print(f'*** --- CLOCK TICK {i} --- ***')
-        time.sleep(0.2)
-        clock_tick(leader, leadernet, i)
-        clock_tick(f1, f1net, i)
-        clock_tick(f2, f2net, i)
+    # start threads to actually run each server
+    threading.Thread(target=run_tcp_server, args=(leader, leadernet), daemon=True).start()
+    threading.Thread(target=run_tcp_server, args=(f1, f1net), daemon=True).start()
+    threading.Thread(target=run_tcp_server, args=(f2, f2net), daemon=True).start()
+
+    time.sleep(0.3)
 
     expected = leader_entries + [Entry(term=2, cmd="gherkins=4")]
-
     assert leader.log.read() == expected
     assert f1.log.read() == expected
     assert f2.log.read() == expected
