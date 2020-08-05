@@ -85,7 +85,16 @@ class Leader(Server):
             self._handle_client_set(cmd=msg.cmd.cmd)
         if isinstance(msg.cmd, AppendEntriesSucceeded):
             self.matchIndex[msg.frm] = msg.cmd.matchIndex
-            self.nextIndex[msg.frm] = msg.cmd.matchIndex + 1
+        if isinstance(msg.cmd, AppendEntriesFailed):
+            self.matchIndex[msg.frm] -= 1
+            self.outbox.append(Message(frm=self.name, to=msg.frm, cmd=AppendEntries(
+                term=self.currentTerm,
+                leaderId=self.name,
+                prevLogIndex=self.matchIndex[msg.frm],
+                prevLogTerm=self.log.entry_term(self.matchIndex[msg.frm]),
+                leaderCommit=0,
+                entries=[],
+            )))
 
     def _handle_client_set(self, cmd: str):
         prevLogIndex = self.log.lastLogIndex

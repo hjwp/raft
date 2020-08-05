@@ -58,7 +58,7 @@ def test_replication_multiple_servers_simple_case():
     assert f2.log.read()[-1].cmd == "foo=1"
 
 
-@pytest.mark.xfail()
+@pytest.mark.xfail
 def test_replication_backtracking():
     peers = ["S2", "S3"]
     leader_entries = [
@@ -82,7 +82,7 @@ def test_replication_backtracking():
 
     raftnet = FakeRaftNetwork([])
     raftnet.dispatch(client_set)
-    for _ in range(100):  # IDEA: while raftnet.messages?
+    for _ in range(10):  # IDEA: while raftnet.messages?
         clock_tick(leader, raftnet)
         clock_tick(f1, raftnet)
         clock_tick(f2, raftnet)

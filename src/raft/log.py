@@ -20,6 +20,10 @@ class Log(Protocol):
         """term of latest entry"""
         ...
 
+    def entry_term(self, index: int) -> int:
+        """term of entry at (1-based) index position"""
+        ...
+
     def check_log(self, prevLogIndex: int, prevLogTerm: int) -> bool:
         ...
 
@@ -45,9 +49,8 @@ class InMemoryLog:
         """1-based"""
         return 0 < index <= len(self._log)
 
-    def _entry_at(self, index: int) -> Entry:
-        """return 1-based index entry"""
-        return self._log[index - 1]
+    def entry_term(self, index: int) -> int:
+        return self._log[index - 1].term
 
     def _replace_at(self, index: int, entry: Entry) -> None:
         """1-based index. truncates any after"""
@@ -61,7 +64,7 @@ class InMemoryLog:
     def last_log_term(self) -> int:
         if len(self._log) == 0:
             return 0
-        return self._entry_at(self.lastLogIndex).term
+        return self.entry_term(self.lastLogIndex)
 
     def check_log(self, prevLogIndex: int, prevLogTerm: int) -> bool:
         """check whether prevLogIndex and prevLogTerm match.  1-based index"""
@@ -70,7 +73,7 @@ class InMemoryLog:
         if not self._has_entry_at(prevLogIndex):
             print(f'nope, no entry at {prevLogIndex}')
             return False
-        if self._entry_at(prevLogIndex).term != prevLogTerm:
+        if self.entry_term(prevLogIndex) != prevLogTerm:
             print(f'nope, entry at {prevLogIndex} had wrong term')
             return False
         return True
