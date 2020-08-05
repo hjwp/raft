@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Union, Optional
 from raft.log import Entry
+
 
 @dataclass
 class ClientSetCommand:
@@ -18,14 +19,19 @@ class AppendEntries:
 
 
 @dataclass
-class AppendEntriesResponse:
-    frm: str
+class AppendEntriesSucceeded:
+    matchIndex: int
+
+
+@dataclass
+class AppendEntriesFailed:
     term: int
-    success: bool
 
 
 @dataclass
 class Message:
     frm: str
     to: str
-    cmd: Union[ClientSetCommand, AppendEntries, AppendEntriesResponse]
+    cmd: Union[
+        ClientSetCommand, AppendEntries, AppendEntriesSucceeded, AppendEntriesFailed,
+    ]

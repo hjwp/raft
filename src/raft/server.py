@@ -3,7 +3,8 @@ from raft.log import Log, Entry
 from raft.messages import (
     Message,
     AppendEntries,
-    AppendEntriesResponse,
+    AppendEntriesSucceeded,
+    AppendEntriesFailed,
     ClientSetCommand,
 )
 
@@ -42,15 +43,19 @@ class Follower(Server):
                 entry, cmd.prevLogIndex, cmd.prevLogTerm, cmd.leaderCommit
             )
             if not success:
-                # TODO:
-                pass
+                self.outbox.append(
+                    Message(
+                        frm=self.name,
+                        to=frm,
+                        cmd=AppendEntriesFailed(term=self.currentTerm),
+                    )
+                )
+                return
         self.outbox.append(
             Message(
                 frm=self.name,
                 to=frm,
-                cmd=AppendEntriesResponse(
-                    frm=self.name, term=self.currentTerm, success=True
-                ),
+                cmd=AppendEntriesSucceeded(matchIndex=self.log.lastLogIndex),
             )
         )
 
@@ -78,6 +83,8 @@ class Leader(Server):
     def handle_message(self, msg: Message) -> None:
         if isinstance(msg.cmd, ClientSetCommand):
             self._handle_client_set(cmd=msg.cmd.cmd)
+        if isinstance(msg.cmd, AppendEntriesSucceeded):
+            self.matchIndex[msg.frm] = msg.cmd.matchIndex
 
     def _handle_client_set(self, cmd: str):
         prevLogIndex = self.log.lastLogIndex
@@ -89,7 +96,7 @@ class Leader(Server):
             prevLogTerm=prevLogTerm,
             leaderCommit=1,
         )
-        print("server added", cmd)
+        print(f"server added {cmd} at position {prevLogIndex + 1}")
         ae = AppendEntries(
             term=self.currentTerm,
             leaderId=self.name,
