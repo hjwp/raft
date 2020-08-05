@@ -84,8 +84,12 @@ class Leader(Server):
         prevLogTerm = self.log.last_log_term
         new_entry = Entry(term=self.currentTerm, cmd=cmd)
         assert self.log.add_entry(
-            entry=new_entry, prevLogIndex=0, prevLogTerm=12, leaderCommit=1
+            entry=new_entry,
+            prevLogIndex=prevLogIndex,
+            prevLogTerm=prevLogTerm,
+            leaderCommit=1,
         )
+        print("server added", cmd)
         ae = AppendEntries(
             term=self.currentTerm,
             leaderId=self.name,

@@ -5,18 +5,19 @@ from raft.messages import AppendEntries, Message, ClientSetCommand
 
 def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
     peers = ["S2", "S3", "S4", "S5"]
-    log = InMemoryLog([])
+    old_entries = [Entry(term=1, cmd='old=1'), Entry(term=2, cmd='old=2')]
+    log = InMemoryLog(old_entries)
     s = Leader(
-        name="S1", peers=peers, log=log, currentTerm=1, votedFor=None
+        name="S1", peers=peers, log=log, currentTerm=2, votedFor=None
     )
     s.handle_message(Message(frm='client.id', to='S1', cmd=ClientSetCommand('foo=bar')))
-    expected_entry = Entry(term=1, cmd="foo=bar")
-    assert s.log.read() == [expected_entry]
+    expected_entry = Entry(term=2, cmd="foo=bar")
+    assert s.log.read() == old_entries + [expected_entry]
     expected_appendentries = AppendEntries(
-        term=1,
+        term=2,
         leaderId="S1",
-        prevLogIndex=0,
-        prevLogTerm=0,
+        prevLogIndex=2,
+        prevLogTerm=2,
         leaderCommit=0,
         entries=[expected_entry],
     )

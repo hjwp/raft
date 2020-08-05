@@ -68,8 +68,10 @@ class InMemoryLog:
         if prevLogIndex == 0:
             return True
         if not self._has_entry_at(prevLogIndex):
+            print(f'nope, no entry at {prevLogIndex}')
             return False
         if self._entry_at(prevLogIndex).term != prevLogTerm:
+            print(f'nope, entry at {prevLogIndex} had wrong term')
             return False
         return True
 
