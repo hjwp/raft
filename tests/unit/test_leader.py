@@ -14,7 +14,7 @@ def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
-    s = Leader(name="S1", peers=peers, log=log, currentTerm=2, votedFor=None)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
     s.handle_message(Message(frm="client.id", to="S1", cmd=ClientSetCommand("foo=bar")))
     expected_entry = Entry(term=2, cmd="foo=bar")
     assert s.log.read() == old_entries + [expected_entry]
@@ -35,7 +35,7 @@ def test_successful_appendentries_response_increments_matchIndex_last_entry_case
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
-    s = Leader(name="S1", peers=peers, log=log, currentTerm=2, votedFor=None)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
     s.matchIndex["S2"] == 1  # arbitrarily
     s.handle_message(
         Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
@@ -47,7 +47,7 @@ def test_failed_appendentries_decrements_matchindex_and_adds_new_AppendEntries_t
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
-    s = Leader(name="S1", peers=peers, log=log, currentTerm=2, votedFor=None)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
     s.matchIndex["S2"] = 2  # arbitrarily
     s.handle_message(Message(frm="S2", to="S1", cmd=AppendEntriesFailed(term=2)))
     assert s.matchIndex["S2"] == 1
@@ -71,7 +71,7 @@ def test_successful_appendentries_response_adds_AppendEntries_if_matchIndex_lowe
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
-    s = Leader(name="S1", peers=peers, log=log, currentTerm=2, votedFor=None)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
     s.matchIndex["S2"] == 0  # arbitrarily
     s.handle_message(
         Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=1))

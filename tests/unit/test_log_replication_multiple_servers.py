@@ -24,36 +24,41 @@ class FakeRaftNetwork:
 
 def test_replication_one_server_simple_case():
     leader = Leader(
-        name="S1", peers=["S2"], log=InMemoryLog([]), currentTerm=1, votedFor=None
+        name="S1",
+        log=InMemoryLog([]),
+        now=1,
+        peers=["S2"],
+        currentTerm=1,
+        votedFor=None,
     )
     follower = Follower(
-        name="S2", log=InMemoryLog([]), currentTerm=1, votedFor=None
+        name="S2", log=InMemoryLog([]), now=1, currentTerm=1, votedFor=None
     )
     client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("foo=1"))
 
     raftnet = FakeRaftNetwork([])
     raftnet.dispatch(client_set)
 
-    clock_tick(leader, raftnet)
-    clock_tick(follower, raftnet)
+    clock_tick(leader, raftnet, 1)
+    clock_tick(follower, raftnet, 1)
     assert follower.log.read()[-1].cmd == "foo=1"
 
 
 def test_replication_multiple_servers_simple_case():
     peers = ["S2", "S3"]
     leader = Leader(
-        name="S1", peers=peers, log=InMemoryLog([]), currentTerm=1, votedFor=None
+        name="S1", log=InMemoryLog([]), now=1, peers=peers, currentTerm=1, votedFor=None
     )
-    f1 = Follower(name="S2", log=InMemoryLog([]), currentTerm=1, votedFor=None)
-    f2 = Follower(name="S3", log=InMemoryLog([]), currentTerm=1, votedFor=None)
+    f1 = Follower(name="S2", log=InMemoryLog([]), now=1, currentTerm=1, votedFor=None)
+    f2 = Follower(name="S3", log=InMemoryLog([]), now=1, currentTerm=1, votedFor=None)
 
     client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("foo=1"))
 
     raftnet = FakeRaftNetwork([])
     raftnet.dispatch(client_set)
-    clock_tick(leader, raftnet)
-    clock_tick(f1, raftnet)
-    clock_tick(f2, raftnet)
+    clock_tick(leader, raftnet, 1)
+    clock_tick(f1, raftnet, 1)
+    clock_tick(f2, raftnet, 1)
     assert f1.log.read()[-1].cmd == "foo=1"
     assert f2.log.read()[-1].cmd == "foo=1"
 
@@ -61,31 +66,39 @@ def test_replication_multiple_servers_simple_case():
 def test_replication_backtracking():
     peers = ["S2", "S3"]
     leader_entries = [
-        Entry(term=1, cmd='monkeys=1'),
-        Entry(term=2, cmd='bananas=2'),
-        Entry(term=2, cmd='turtles=3'),
+        Entry(term=1, cmd="monkeys=1"),
+        Entry(term=2, cmd="bananas=2"),
+        Entry(term=2, cmd="turtles=3"),
     ]
     one_wrong_entry = [
-        Entry(term=1, cmd='monkeys=1'),
-        Entry(term=1, cmd='monkeys=2'),
+        Entry(term=1, cmd="monkeys=1"),
+        Entry(term=1, cmd="monkeys=2"),
     ]
 
-
     leader = Leader(
-        name="S1", peers=peers, log=InMemoryLog(leader_entries), currentTerm=2, votedFor=None
+        name="S1",
+        log=InMemoryLog(leader_entries),
+        now=1,
+        peers=peers,
+        currentTerm=2,
+        votedFor=None,
     )
-    f1 = Follower(name="S2", log=InMemoryLog([]), currentTerm=2, votedFor=None)
-    f2 = Follower(name="S3", log=InMemoryLog(one_wrong_entry), currentTerm=2, votedFor=None)
+    f1 = Follower(name="S2", log=InMemoryLog([]), now=1, currentTerm=2, votedFor=None)
+    f2 = Follower(
+        name="S3", log=InMemoryLog(one_wrong_entry), now=1, currentTerm=2, votedFor=None
+    )
 
     client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("gherkins=4"))
 
     raftnet = FakeRaftNetwork([])
     raftnet.dispatch(client_set)
-    for _ in range(10):  # IDEA: while raftnet.messages?
-        clock_tick(leader, raftnet)
-        clock_tick(f1, raftnet)
-        clock_tick(f2, raftnet)
-    expected = leader_entries + [Entry(term=2, cmd='gherkins=4')]
+
+    for i in range(1, 11):  # IDEA: while raftnet.messages?
+        clock_tick(leader, raftnet, i)
+        clock_tick(f1, raftnet, i)
+        clock_tick(f2, raftnet, i)
+
+    expected = leader_entries + [Entry(term=2, cmd="gherkins=4")]
 
     assert leader.log.read() == expected
     assert f1.log.read() == expected

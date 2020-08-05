@@ -8,14 +8,15 @@ def run_server(name: str):
     raftnet = RaftTCPNetwork()  #  may need some info about ports, tbc
     server = Server(name, log=log, currentTerm=0, votedFor=None)
     while True:
-        clock_tick(server, raftnet)
+        clock_tick(server, raftnet, time.time())
         time.sleep(0.01)
 
-def clock_tick(server: Server, raftnet: RaftNetwork):
-    server.clock_tick(now=time.time())  # am expecting this to handle timeouts, heartbeats, etc
+def clock_tick(server: Server, raftnet: RaftNetwork, now: float):
+    server.clock_tick(now=now)  # am expecting this to handle timeouts, heartbeats, etc
 
     for m in raftnet.get_messages(server.name):
         server.handle_message(m)
+
     while server.outbox:
         m = server.outbox.pop(0)
         raftnet.dispatch(m)

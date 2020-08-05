@@ -11,7 +11,8 @@ from raft.messages import (
 
 class Server:
     def __init__(
-        self, name: str, log: Log, currentTerm: int, votedFor: Optional[str],
+        self, name: str, log: Log, now: float,
+        currentTerm: int, votedFor: Optional[str],
     ):
         self.name = name
         self.outbox = []  # type: List[Message]
@@ -66,12 +67,13 @@ class Leader(Server):
     def __init__(
         self,
         name: str,
-        peers: List[str],
         log: Log,
+        now: float,
+        peers: List[str],
         currentTerm: int,
         votedFor: Optional[str],
     ):
-        super().__init__(name, log, currentTerm, votedFor)
+        super().__init__(name, log, now, currentTerm, votedFor)
         self.peers = peers
 
         # Raft leader volatile state
@@ -85,6 +87,7 @@ class Leader(Server):
         self.matchIndex = {
             server_name: self.log.lastLogIndex for server_name in self.peers
         }  # type: Dict[str, int]
+
 
     def handle_message(self, msg: Message) -> None:
         print(f'{self.name} handling {msg.cmd.__class__.__name__} from {msg.frm}')

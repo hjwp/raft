@@ -10,7 +10,7 @@ from raft.messages import (
 
 def test_append_entries_adds_to_local_log_and_returns_success_response():
     log = InMemoryLog([])
-    s = Follower(name="S2", log=log, currentTerm=1, votedFor=None)
+    s = Follower(name="S2", log=log, now=1, currentTerm=1, votedFor=None)
     new_entry = Entry(term=1, cmd="foo=bar")
     s.handle_message(
         Message(
@@ -34,7 +34,7 @@ def test_append_entries_adds_to_local_log_and_returns_success_response():
 def test_append_entries_failed_response():
     old_entries = [Entry(term=1, cmd="first=entry"), Entry(term=2, cmd="e=2")]
     log = InMemoryLog(old_entries)
-    s = Follower(name="S2", log=log, currentTerm=2, votedFor=None)
+    s = Follower(name="S2", log=log, now=1, currentTerm=2, votedFor=None)
     new_entry = Entry(term=1, cmd="term=wrong")
     s.handle_message(
         Message(
