@@ -1,12 +1,12 @@
 import time
-from raft.adapters.network import RaftNetwork, RaftTCPNetwork
+from raft.adapters.network import RaftNetwork, TCPRaftNet
 from raft.server import Server
 from raft.log import InMemoryLog
 
-def run_server(name: str):
+def run_tcp_server(name: str):
     log = InMemoryLog([])  # load from persistent storage at some point
-    raftnet = RaftTCPNetwork()  #  may need some info about ports, tbc
-    server = Server(name, log=log, currentTerm=0, votedFor=None)
+    raftnet = TCPRaftNet(name)
+    server = Server(name, log=log, now=time.time(), currentTerm=0, votedFor=None)
     while True:
         clock_tick(server, raftnet, time.time())
         time.sleep(0.01)
