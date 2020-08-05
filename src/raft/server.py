@@ -85,6 +85,7 @@ class Leader(Server):
             self._handle_client_set(cmd=msg.cmd.cmd)
         if isinstance(msg.cmd, AppendEntriesSucceeded):
             self.matchIndex[msg.frm] = msg.cmd.matchIndex
+            self.nextIndex[msg.frm] = msg.cmd.matchIndex + 1
 
     def _handle_client_set(self, cmd: str):
         prevLogIndex = self.log.lastLogIndex

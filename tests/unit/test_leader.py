@@ -30,15 +30,19 @@ def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
     ]
 
 
-def test_successful_appendentries_response_increments_matchindex():
+def test_successful_appendentries_response_increments_matchIndex_and_nextIndex():
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", peers=peers, log=log, currentTerm=2, votedFor=None)
+    assert s.matchIndex["S2"] == 0
+    assert s.nextIndex["S2"] == 2
     s.handle_message(
         Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
     )
     assert s.matchIndex["S2"] == 2
+    assert s.nextIndex["S2"] == 3
+    # TODO: can nextIndex != matchIndex +1?
 
 
 import pytest
