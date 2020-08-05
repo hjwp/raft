@@ -34,6 +34,7 @@ class Server:
 
 class Follower(Server):
     def handle_message(self, msg: Message) -> None:
+        print(f'{self.name} handling {msg.cmd.__class__.__name__} from {msg.frm}')
         if isinstance(msg.cmd, AppendEntries):
             self._handle_append_entries(frm=msg.frm, cmd=msg.cmd)
 
@@ -76,24 +77,46 @@ class Leader(Server):
         self.nextIndex = {
             server_name: self.log.lastLogIndex for server_name in self.peers
         }  # type: Dict[str, int]
+
+        ## I am going to try and get backtracking working using only matchIndex
+        ## so i am initializing it to lastLogIndex instead of 0
         self.matchIndex = {
-            server_name: 0 for server_name in self.peers
+            server_name: self.log.lastLogIndex for server_name in self.peers
         }  # type: Dict[str, int]
 
     def handle_message(self, msg: Message) -> None:
+        print(f'{self.name} handling {msg.cmd.__class__.__name__} from {msg.frm}')
         if isinstance(msg.cmd, ClientSetCommand):
             self._handle_client_set(cmd=msg.cmd.cmd)
+
         if isinstance(msg.cmd, AppendEntriesSucceeded):
             self.matchIndex[msg.frm] = msg.cmd.matchIndex
+            if self.matchIndex[msg.frm] < self.log.lastLogIndex:
+                next_to_send = self.log.entry_at(self.matchIndex[msg.frm] + 1)
+                prevLogIndex = self.matchIndex[msg.frm]
+                prevLogTerm = self.log.entry_term(prevLogIndex)
+                self.outbox.append(Message(frm=self.name, to=msg.frm, cmd=AppendEntries(
+                    term=self.currentTerm,
+                    leaderId=self.name,
+                    prevLogIndex=prevLogIndex,
+                    prevLogTerm=prevLogTerm,
+                    leaderCommit=0,
+                    entries=[next_to_send],
+                )))
+
         if isinstance(msg.cmd, AppendEntriesFailed):
             self.matchIndex[msg.frm] -= 1
+            to_resend = self.log.entry_at(self.matchIndex[msg.frm])
+            print(f'{msg.frm} failed, resending entry at {self.matchIndex[msg.frm]}')
+            prevLogIndex = self.matchIndex[msg.frm] - 1
+            prevLogTerm = self.log.entry_term(prevLogIndex)
             self.outbox.append(Message(frm=self.name, to=msg.frm, cmd=AppendEntries(
                 term=self.currentTerm,
                 leaderId=self.name,
-                prevLogIndex=self.matchIndex[msg.frm],
-                prevLogTerm=self.log.entry_term(self.matchIndex[msg.frm]),
+                prevLogIndex=prevLogIndex,
+                prevLogTerm=prevLogTerm,
                 leaderCommit=0,
-                entries=[],
+                entries=[to_resend],
             )))
 
     def _handle_client_set(self, cmd: str):

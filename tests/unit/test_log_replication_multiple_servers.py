@@ -8,18 +8,18 @@ from raft.server import Leader, Follower
 
 class FakeRaftNetwork:
     def __init__(self, messages: List[Message]):
-        self.messages = messages
+        self._messages = messages
 
     def get_messages(self, to: str) -> List[Message]:
         """retrieve messages for someone, and take them out of the network"""
-        theirs = [m for m in self.messages if m.to == to]
+        theirs = [m for m in self._messages if m.to == to]
         for m in theirs:
-            self.messages.remove(m)
+            self._messages.remove(m)
         return theirs
 
     def dispatch(self, msg: Message) -> None:
         """put the message into the network"""
-        self.messages.append(msg)
+        self._messages.append(msg)
 
 
 def test_replication_one_server_simple_case():
@@ -58,7 +58,6 @@ def test_replication_multiple_servers_simple_case():
     assert f2.log.read()[-1].cmd == "foo=1"
 
 
-@pytest.mark.xfail
 def test_replication_backtracking():
     peers = ["S2", "S3"]
     leader_entries = [

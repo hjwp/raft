@@ -16,6 +16,6 @@ def clock_tick(server: Server, raftnet: RaftNetwork):
 
     for m in raftnet.get_messages(server.name):
         server.handle_message(m)
-    for m in server.outbox:  # server.outbox will be a list of messages to send out
-                             # both clock_tick() and handle_message() can add to it
+    while server.outbox:
+        m = server.outbox.pop(0)
         raftnet.dispatch(m)
