@@ -33,6 +33,7 @@ class Server:
 
 
 class Follower(Server):
+
     def handle_message(self, msg: Message) -> None:
         print(f'{self.name} handling {msg.cmd.__class__.__name__} from {msg.frm}')
         if isinstance(msg.cmd, AppendEntries):
@@ -80,6 +81,7 @@ class Leader(Server):
 
         ## I am going to try and get backtracking working using only matchIndex
         ## so i am initializing it to lastLogIndex instead of 0
+        ## TODO: i think this won't work when it comes to calculating commitIndex??
         self.matchIndex = {
             server_name: self.log.lastLogIndex for server_name in self.peers
         }  # type: Dict[str, int]
