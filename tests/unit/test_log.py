@@ -1,5 +1,25 @@
 from raft.log import InMemoryLog, Entry
 
+def test_some_helpers():
+    entries = [
+        Entry(term=1, cmd="foo=1"),
+        Entry(term=2, cmd="foo=2"),
+        Entry(term=3, cmd="foo=3"),
+    ]
+    log = InMemoryLog(entries)
+    assert log.lastLogIndex == 3
+    assert log.entry_term(1) == 1
+    assert log.entry_term(2) == 2
+    assert log.entry_term(3) == 3
+    assert log.entry_term(0) == 0
+    assert log.entry_term(-1) == 3
+
+    assert log.entry_at(1) == entries[0]
+    assert log.entry_at(2) == entries[1]
+    assert log.entry_at(3) == entries[2]
+    assert log.entry_at(-1) == entries[2]
+
+
 
 def test_add_entry_happy_path():
     old_entry = Entry(term=1, cmd="foo=1")

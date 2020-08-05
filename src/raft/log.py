@@ -24,6 +24,10 @@ class Log(Protocol):
         """term of entry at (1-based) index position"""
         ...
 
+    def entry_at(self, index: int) -> Entry:
+        """Entry at (1-based) index position"""
+        ...
+
     def check_log(self, prevLogIndex: int, prevLogTerm: int) -> bool:
         ...
 
@@ -49,9 +53,6 @@ class InMemoryLog:
         """1-based"""
         return 0 < index <= len(self._log)
 
-    def entry_term(self, index: int) -> int:
-        return self._log[index - 1].term
-
     def _replace_at(self, index: int, entry: Entry) -> None:
         """1-based index. truncates any after"""
         self._log = self._log[:index - 1] + [entry]
@@ -65,6 +66,16 @@ class InMemoryLog:
         if len(self._log) == 0:
             return 0
         return self.entry_term(self.lastLogIndex)
+
+    def entry_term(self, index: int) -> int:
+        if index == 0:
+            return 0
+        return self.entry_at(index).term
+
+    def entry_at(self, index: int) -> Entry:
+        if index < 0:
+            return self._log[index]
+        return self._log[index - 1]
 
     def check_log(self, prevLogIndex: int, prevLogTerm: int) -> bool:
         """check whether prevLogIndex and prevLogTerm match.  1-based index"""
