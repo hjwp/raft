@@ -1,4 +1,3 @@
-heartbeats
 election timeout and transition to candidate
     - Roles?
     - self.__class__ ?

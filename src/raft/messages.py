@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Union, Optional
+from typing import List, Union
 from raft.log import Entry
 
 
@@ -29,9 +29,33 @@ class AppendEntriesFailed:
 
 
 @dataclass
+class RequestVote:
+    term: int
+    candidateId: str
+    lastLogIndex: int
+    lastLogTerm: int
+
+
+@dataclass
+class VoteGranted:
+    pass
+
+
+@dataclass
+class VoteRefused:
+    term: int
+
+
+@dataclass
 class Message:
     frm: str
     to: str
     cmd: Union[
-        ClientSetCommand, AppendEntries, AppendEntriesSucceeded, AppendEntriesFailed,
+        ClientSetCommand,
+        AppendEntries,
+        AppendEntriesSucceeded,
+        AppendEntriesFailed,
+        RequestVote,
+        VoteGranted,
+        VoteRefused,
     ]

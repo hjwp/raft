@@ -21,6 +21,7 @@ class Server:
         self.name = name
         self.now = now  # TODO: do we actually need this?
         self._last_heartbeat = 0  # type: float
+        self._election_timeout = 0  # type: float
         self.outbox = []  # type: List[Message]
 
         # Raft persistent state
@@ -33,13 +34,22 @@ class Server:
         self.lastApplied = 0
 
     def handle_message(self, msg: Message):
-        ...
+        raise NotImplementedError
 
     def clock_tick(self, now: float):
-        ...
+        raise NotImplementedError
+
+
+
+MIN_ELECTION_TIMEOUT = 0.15
+ELECTION_TIMEOUT_JITTER = 0.15
 
 
 class Follower(Server):
+
+    def clock_tick(self, now: float):
+        pass  # TODO
+
     def handle_message(self, msg: Message) -> None:
         if isinstance(msg.cmd, AppendEntries):
             kvcmd = msg.cmd.entries[0].cmd if msg.cmd.entries else "HeArtBeAt"
