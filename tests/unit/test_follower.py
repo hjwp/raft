@@ -11,7 +11,7 @@ from raft.messages import (
 
 def test_append_entries_adds_to_local_log_and_returns_success_response():
     log = InMemoryLog([])
-    s = Follower(name="S2", log=log, now=1, currentTerm=1, votedFor=None)
+    s = Follower(name="S2", log=log, currentTerm=1, votedFor=None)
     new_entry = Entry(term=1, cmd="foo=bar")
     s.handle_message(
         Message(
@@ -34,7 +34,7 @@ def test_append_entries_adds_to_local_log_and_returns_success_response():
 
 def test_append_entries_with_no_entry_aka_heartbeat_at_zero():
     log = InMemoryLog([])
-    s = Follower(name="S2", log=log, now=1, currentTerm=1, votedFor=None)
+    s = Follower(name="S2", log=log, currentTerm=1, votedFor=None)
     s.handle_message(
         Message(
             frm="S1",
@@ -55,7 +55,7 @@ def test_append_entries_with_no_entry_aka_heartbeat_at_zero():
 
 def test_append_entries_with_no_entry_aka_heartbeat_at_nonzero():
     log = InMemoryLog([Entry(term=1, cmd='foo=1')])
-    s = Follower(name="S2", log=log, now=1, currentTerm=1, votedFor=None)
+    s = Follower(name="S2", log=log, currentTerm=1, votedFor=None)
     s.handle_message(
         Message(
             frm="S1",
@@ -76,7 +76,7 @@ def test_append_entries_with_no_entry_aka_heartbeat_at_nonzero():
 def test_append_entries_failed_response():
     old_entries = [Entry(term=1, cmd="first=entry"), Entry(term=2, cmd="e=2")]
     log = InMemoryLog(old_entries)
-    s = Follower(name="S2", log=log, now=1, currentTerm=2, votedFor=None)
+    s = Follower(name="S2", log=log, currentTerm=2, votedFor=None)
     new_entry = Entry(term=1, cmd="term=wrong")
     s.handle_message(
         Message(
@@ -100,7 +100,7 @@ def test_append_entries_failed_response():
 def test_append_entries_failed_response_to_heartbeat():
     old_entries = [Entry(term=1, cmd="first=entry"), Entry(term=2, cmd="e=2")]
     log = InMemoryLog(old_entries)
-    s = Follower(name="S2", log=log, now=1, currentTerm=2, votedFor=None)
+    s = Follower(name="S2", log=log, currentTerm=2, votedFor=None)
     s.handle_message(
         Message(
             frm="S1",
@@ -121,7 +121,7 @@ def test_append_entries_failed_response_to_heartbeat():
 
 
 def test_clock_tick_does_nothing_by_default():
-    s = Follower(name="S2", log=InMemoryLog([]), now=1, currentTerm=2, votedFor=None)
+    s = Follower(name="S2", log=InMemoryLog([]), currentTerm=2, votedFor=None)
     s.clock_tick(now=1.001)
     assert s.outbox == []
 
@@ -129,7 +129,7 @@ def test_clock_tick_does_nothing_by_default():
 @pytest.mark.xfail
 def test_calls_election_if_clock_tick_past_election_timeout():
     log = [Entry(2, 'foo=1'), Entry(3, 'foo=2')]
-    f = Follower(name="S2", log=InMemoryLog(log), now=1, currentTerm=3, votedFor=None)
+    f = Follower(name="S2", log=InMemoryLog(log), currentTerm=3, votedFor=None)
     f.clock_tick(now=1.001)
     assert f.outbox == []
     f.clock_tick(now=2)

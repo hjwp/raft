@@ -28,7 +28,7 @@ def _main(name: str) -> Tuple[Server, RaftNetwork]:
     raftnet = TCPRaftNet(name)
     raftnet.start()
     server = Follower(
-        name=name, log=InMemoryLog([]), now=time.time(), currentTerm=0, votedFor=None
+        name=name, log=InMemoryLog([]), currentTerm=0, votedFor=None
     )
     import threading
     threading.Thread(target=run_tcp_server, args=(server, raftnet), daemon=True).start()

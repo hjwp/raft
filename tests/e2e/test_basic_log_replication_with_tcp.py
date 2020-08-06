@@ -37,14 +37,13 @@ def test_replication_with_tcp_servers():
     leader = Leader(
         name="S1",
         log=InMemoryLog(leader_entries),
-        now=1,
         peers=["S2", "S3"],
         currentTerm=2,
         votedFor=None,
     )
-    f1 = Follower(name="S2", log=InMemoryLog([]), now=1, currentTerm=2, votedFor=None)
+    f1 = Follower(name="S2", log=InMemoryLog([]), currentTerm=2, votedFor=None)
     f2 = Follower(
-        name="S3", log=InMemoryLog(one_wrong_entry), now=1, currentTerm=2, votedFor=None
+        name="S3", log=InMemoryLog(one_wrong_entry), currentTerm=2, votedFor=None
     )
 
     client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("gherkins=4"))

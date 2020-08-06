@@ -14,12 +14,10 @@ class Server:
         self,
         name: str,
         log: Log,
-        now: float,
         currentTerm: int,
         votedFor: Optional[str],
     ):
         self.name = name
-        self.now = now  # TODO: do we actually need this?
         self._last_heartbeat = 0  # type: float
         self._election_timeout = 0  # type: float
         self.outbox = []  # type: List[Message]
@@ -89,12 +87,11 @@ class Leader(Server):
         self,
         name: str,
         log: Log,
-        now: float,
         peers: List[str],
         currentTerm: int,
         votedFor: Optional[str],
     ):
-        super().__init__(name, log, now, currentTerm, votedFor)
+        super().__init__(name, log, currentTerm, votedFor)
         self.peers = peers
 
         # Raft leader volatile state
