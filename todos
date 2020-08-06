@@ -1,0 +1,10 @@
+fix backtracking (need nextIndex)
+heartbeats
+election timeout and transition to candidate
+    - Roles?
+    - self.__class__ ?
+commit index
+convert to appenendtries being a list.
+
+tricker unit/e2e test case for log replication?
+stop using pickle

@@ -63,6 +63,7 @@ def test_replication_multiple_servers_simple_case():
     assert f2.log.read()[-1].cmd == "foo=1"
 
 
+@pytest.mark.xfail
 def test_replication_backtracking():
     peers = ["S2", "S3"]
     leader_entries = [
