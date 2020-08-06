@@ -46,25 +46,23 @@ class Server:
     def clock_tick(self, now: float):
         raise NotImplementedError
 
+    def _become_candidate(self) -> None:
+        self.__class__ = Candidate
+        self._call_election()  # pylint: disable=no-member
+
+
 
 MIN_ELECTION_TIMEOUT = 0.15
 ELECTION_TIMEOUT_JITTER = 0.15
 
 
 class Follower(Server):
+
     def clock_tick(self, now: float):
         if now > self._election_timeout:
-            self.currentTerm += 1
             self._reset_election_timeout(now)
-            self.outbox.extend(
-                Message(frm=self.name, to=p, cmd=RequestVote(
-                    term=self.currentTerm,
-                    candidateId=self.name,
-                    lastLogIndex=self.log.lastLogIndex,
-                    lastLogTerm=self.log.last_log_term,
-                ))
-                for p in self.peers if p != self.name
-            )
+            self._become_candidate()
+
 
     def handle_message(self, msg: Message) -> None:
         if isinstance(msg.cmd, AppendEntries):
@@ -94,6 +92,24 @@ class Follower(Server):
                 to=frm,
                 cmd=AppendEntriesSucceeded(matchIndex=self.log.lastLogIndex),
             )
+        )
+
+class Candidate(Server):
+
+    def clock_tick(self, now: float) -> None:
+        pass
+
+
+    def _call_election(self):
+        self.currentTerm += 1
+        self.outbox.extend(
+            Message(frm=self.name, to=p, cmd=RequestVote(
+                term=self.currentTerm,
+                candidateId=self.name,
+                lastLogIndex=self.log.lastLogIndex,
+                lastLogTerm=self.log.last_log_term,
+            ))
+            for p in self.peers if p != self.name
         )
 
 
@@ -224,3 +240,4 @@ class Leader(Server):
         self.outbox.extend(
             Message(frm=self.name, to=s, cmd=ae) for s in self.peers if s != self.name
         )
+

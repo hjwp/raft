@@ -111,9 +111,9 @@ def test_replication_backtracking():
 
     for i in range(1, 11):  # IDEA: while raftnet.messages?
         print(f"*** --- CLOCK TIIIIICK {i} --- ***")
-        clock_tick(leader, raftnet, i)
-        clock_tick(f1, raftnet, i)
-        clock_tick(f2, raftnet, i)
+        clock_tick(leader, raftnet, 1 + i / 100.0)
+        clock_tick(f1, raftnet, 1 + i / 100.0)
+        clock_tick(f2, raftnet, 1 + i / 100.0)
 
     expected = leader_entries + [Entry(term=2, cmd="gherkins=4")]
 
