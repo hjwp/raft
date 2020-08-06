@@ -7,13 +7,19 @@ from raft.messages import (
     AppendEntriesFailed,
     RequestVote,
     Message,
-
 )
 
 
 def test_append_entries_adds_to_local_log_and_returns_success_response():
     log = InMemoryLog([])
-    s = Follower(name="S2", peers=["S1", "S2", "S3"], log=log, currentTerm=1, votedFor=None)
+    s = Follower(
+        name="S2",
+        peers=["S1", "S2", "S3"],
+        now=1,
+        log=log,
+        currentTerm=1,
+        votedFor=None,
+    )
     new_entry = Entry(term=1, cmd="foo=bar")
     s.handle_message(
         Message(
@@ -36,7 +42,14 @@ def test_append_entries_adds_to_local_log_and_returns_success_response():
 
 def test_append_entries_with_no_entry_aka_heartbeat_at_zero():
     log = InMemoryLog([])
-    s = Follower(name="S2", peers=["S1", "S2", "S3"], log=log, currentTerm=1, votedFor=None)
+    s = Follower(
+        name="S2",
+        peers=["S1", "S2", "S3"],
+        now=1,
+        log=log,
+        currentTerm=1,
+        votedFor=None,
+    )
     s.handle_message(
         Message(
             frm="S1",
@@ -55,9 +68,17 @@ def test_append_entries_with_no_entry_aka_heartbeat_at_zero():
     expected_response = AppendEntriesSucceeded(matchIndex=0)
     assert s.outbox == [Message(frm="S2", to="S1", cmd=expected_response)]
 
+
 def test_append_entries_with_no_entry_aka_heartbeat_at_nonzero():
-    log = InMemoryLog([Entry(term=1, cmd='foo=1')])
-    s = Follower(name="S2", peers=["S1", "S2", "S3"], log=log, currentTerm=1, votedFor=None)
+    log = InMemoryLog([Entry(term=1, cmd="foo=1")])
+    s = Follower(
+        name="S2",
+        peers=["S1", "S2", "S3"],
+        now=1,
+        log=log,
+        currentTerm=1,
+        votedFor=None,
+    )
     s.handle_message(
         Message(
             frm="S1",
@@ -75,10 +96,18 @@ def test_append_entries_with_no_entry_aka_heartbeat_at_nonzero():
     expected_response = AppendEntriesSucceeded(matchIndex=1)
     assert s.outbox == [Message(frm="S2", to="S1", cmd=expected_response)]
 
+
 def test_append_entries_failed_response():
     old_entries = [Entry(term=1, cmd="first=entry"), Entry(term=2, cmd="e=2")]
     log = InMemoryLog(old_entries)
-    s = Follower(name="S2", peers=["S1", "S2", "S3"], log=log, currentTerm=2, votedFor=None)
+    s = Follower(
+        name="S2",
+        peers=["S1", "S2", "S3"],
+        now=1,
+        log=log,
+        currentTerm=2,
+        votedFor=None,
+    )
     new_entry = Entry(term=1, cmd="term=wrong")
     s.handle_message(
         Message(
@@ -102,7 +131,14 @@ def test_append_entries_failed_response():
 def test_append_entries_failed_response_to_heartbeat():
     old_entries = [Entry(term=1, cmd="first=entry"), Entry(term=2, cmd="e=2")]
     log = InMemoryLog(old_entries)
-    s = Follower(name="S2", peers=["S1", "S2", "S3"], log=log, currentTerm=2, votedFor=None)
+    s = Follower(
+        name="S2",
+        peers=["S1", "S2", "S3"],
+        now=1,
+        log=log,
+        currentTerm=2,
+        votedFor=None,
+    )
     s.handle_message(
         Message(
             frm="S1",
@@ -125,7 +161,14 @@ def test_append_entries_failed_response_to_heartbeat():
 @pytest.mark.xfail
 def test_clock_tick_does_nothing_by_default():
     term = 2
-    s = Follower(name="S2", peers=["S1", "S2", "S3"], log=InMemoryLog([]), currentTerm=term, votedFor=None)
+    s = Follower(
+        name="S2",
+        peers=["S1", "S2", "S3"],
+        now=1,
+        log=InMemoryLog([]),
+        currentTerm=term,
+        votedFor=None,
+    )
     a_tiny_amount_of_time = 0.001
     s.clock_tick(a_tiny_amount_of_time)
     assert s.currentTerm == term
@@ -134,8 +177,15 @@ def test_clock_tick_does_nothing_by_default():
 
 @pytest.mark.xfail
 def test_calls_election_if_clock_tick_past_election_timeout():
-    log = [Entry(2, 'foo=1'), Entry(3, 'foo=2')]
-    f = Follower(name="S2", peers=["S1", "S2", "S3"], log=InMemoryLog(log), currentTerm=3, votedFor=None)
+    log = [Entry(2, "foo=1"), Entry(3, "foo=2")]
+    f = Follower(
+        name="S2",
+        peers=["S1", "S2", "S3"],
+        now=1,
+        log=InMemoryLog(log),
+        currentTerm=3,
+        votedFor=None,
+    )
     a_tiny_amount_of_time = 0.001
     f.clock_tick(a_tiny_amount_of_time)
     assert f.outbox == []
@@ -146,6 +196,10 @@ def test_calls_election_if_clock_tick_past_election_timeout():
 
     assert f.currentTerm == 4
     assert f.outbox == [
-        Message(frm="S2", to=s, cmd=RequestVote(term=4, candidateId="S2", lastLogIndex=2, lastLogTerm=3))
+        Message(
+            frm="S2",
+            to=s,
+            cmd=RequestVote(term=4, candidateId="S2", lastLogIndex=2, lastLogTerm=3),
+        )
         for s in f.peers
     ]

@@ -25,13 +25,19 @@ class FakeRaftNetwork:
 def test_replication_one_server_simple_case():
     leader = Leader(
         name="S1",
+        now=1,
         log=InMemoryLog([]),
         peers=["S1", "S2"],
         currentTerm=1,
         votedFor=None,
     )
     follower = Follower(
-        name="S2", peers=["S1", "S2"], log=InMemoryLog([]), currentTerm=1, votedFor=None
+        name="S2",
+        peers=["S1", "S2"],
+        now=1,
+        log=InMemoryLog([]),
+        currentTerm=1,
+        votedFor=None,
     )
     client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("foo=1"))
 
@@ -46,10 +52,14 @@ def test_replication_one_server_simple_case():
 def test_replication_multiple_servers_simple_case():
     peers = ["S1", "S2", "S3"]
     leader = Leader(
-        name="S1", log=InMemoryLog([]), peers=peers, currentTerm=1, votedFor=None
+        name="S1", now=1, log=InMemoryLog([]), peers=peers, currentTerm=1, votedFor=None
     )
-    f1 = Follower(name="S2", peers=peers, log=InMemoryLog([]), currentTerm=1, votedFor=None)
-    f2 = Follower(name="S3", peers=peers, log=InMemoryLog([]), currentTerm=1, votedFor=None)
+    f1 = Follower(
+        name="S2", peers=peers, now=1, log=InMemoryLog([]), currentTerm=1, votedFor=None
+    )
+    f2 = Follower(
+        name="S3", peers=peers, now=1, log=InMemoryLog([]), currentTerm=1, votedFor=None
+    )
 
     client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("foo=1"))
 
@@ -76,14 +86,22 @@ def test_replication_backtracking():
 
     leader = Leader(
         name="S1",
+        now=1,
         log=InMemoryLog(leader_entries),
         peers=peers,
         currentTerm=2,
         votedFor=None,
     )
-    f1 = Follower(name="S2", peers=peers, log=InMemoryLog([]), currentTerm=2, votedFor=None)
+    f1 = Follower(
+        name="S2", peers=peers, now=1, log=InMemoryLog([]), currentTerm=2, votedFor=None
+    )
     f2 = Follower(
-        name="S3", peers=peers, log=InMemoryLog(one_wrong_entry), currentTerm=2, votedFor=None
+        name="S3",
+        peers=peers,
+        now=1,
+        log=InMemoryLog(one_wrong_entry),
+        currentTerm=2,
+        votedFor=None,
     )
 
     client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("gherkins=4"))
@@ -92,7 +110,7 @@ def test_replication_backtracking():
     raftnet.dispatch(client_set)
 
     for i in range(1, 11):  # IDEA: while raftnet.messages?
-        print(f'*** --- CLOCK TIIIIICK {i} --- ***')
+        print(f"*** --- CLOCK TIIIIICK {i} --- ***")
         clock_tick(leader, raftnet, i)
         clock_tick(f1, raftnet, i)
         clock_tick(f2, raftnet, i)
