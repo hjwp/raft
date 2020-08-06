@@ -9,12 +9,21 @@ from raft.messages import (
     ClientSetCommand,
 )
 
+def test_init():
+    peers = ["S2", "S3"]
+    old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
+    log = InMemoryLog(old_entries)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
+    assert s.matchIndex == {'S2': 0, 'S3': 0}
+    assert s.nextIndex == {'S2': 3, 'S3': 3}
+
 
 def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
+
     s.handle_message(Message(frm="client.id", to="S1", cmd=ClientSetCommand("foo=bar")))
     expected_entry = Entry(term=2, cmd="foo=bar")
     assert s.log.read() == old_entries + [expected_entry]
@@ -36,12 +45,14 @@ def test_successful_appendentries_response_updates_matchIndex_last_entry_case():
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
+
     s.matchIndex["S2"] == 1  # arbitrarily
     s.handle_message(
         Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
     )
     assert s.matchIndex["S2"] == 2
     assert s.outbox == []
+
 
 def test_duplicate_appendentries_responses_do_not_double_increment_matchindex():
     peers = ["S2", "S3", "S4", "S5"]
@@ -59,6 +70,7 @@ def test_duplicate_appendentries_responses_do_not_double_increment_matchindex():
         Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
     )
     assert s.matchIndex["S2"] == 2
+
 
 def test_failed_appendentries_decrements_matchindex_and_adds_new_AppendEntries_to_outbox():
     peers = ["S2", "S3", "S4", "S5"]
