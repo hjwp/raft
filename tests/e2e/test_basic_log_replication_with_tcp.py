@@ -10,11 +10,9 @@ from raft.log import InMemoryLog, Entry
 from raft.messages import Message, ClientSetCommand
 from raft.server import Leader, Follower
 
+
 def test_replication_with_tcp_servers():
-    networks = {
-        name: TCPRaftNet(name)
-        for name in TCPRaftNet.SERVERS
-    }
+    networks = {name: TCPRaftNet(name) for name in TCPRaftNet.SERVERS}
     for net in networks.values():
         net.start()
 
@@ -33,29 +31,37 @@ def test_replication_with_tcp_servers():
         Entry(term=1, cmd="monkeys=1"),
         Entry(term=1, cmd="monkeys=2"),
     ]
-
+    peers = ["S1", "S2", "S3"]
     leader = Leader(
         name="S1",
         log=InMemoryLog(leader_entries),
-        peers=["S2", "S3"],
+        peers=peers,
         currentTerm=2,
         votedFor=None,
     )
-    f1 = Follower(name="S2", log=InMemoryLog([]), currentTerm=2, votedFor=None)
+    f1 = Follower(
+        name="S2", peers=peers, log=InMemoryLog([]), currentTerm=2, votedFor=None
+    )
     f2 = Follower(
-        name="S3", log=InMemoryLog(one_wrong_entry), currentTerm=2, votedFor=None
+        name="S3",
+        peers=peers,
+        log=InMemoryLog(one_wrong_entry),
+        currentTerm=2,
+        votedFor=None,
     )
 
     client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("gherkins=4"))
 
-    leadernet = networks['S1']
-    f1net = networks['S2']
-    f2net = networks['S3']
-    randomnet = networks['S5']
+    leadernet = networks["S1"]
+    f1net = networks["S2"]
+    f2net = networks["S3"]
+    randomnet = networks["S5"]
     randomnet.dispatch(client_set)
 
     # start threads to actually run each server
-    threading.Thread(target=run_tcp_server, args=(leader, leadernet), daemon=True).start()
+    threading.Thread(
+        target=run_tcp_server, args=(leader, leadernet), daemon=True
+    ).start()
     threading.Thread(target=run_tcp_server, args=(f1, f1net), daemon=True).start()
     threading.Thread(target=run_tcp_server, args=(f2, f2net), daemon=True).start()
 

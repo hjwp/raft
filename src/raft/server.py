@@ -13,11 +13,13 @@ class Server:
     def __init__(
         self,
         name: str,
+        peers: List[str],
         log: Log,
         currentTerm: int,
         votedFor: Optional[str],
     ):
         self.name = name
+        self.peers = peers
         self._last_heartbeat = 0  # type: float
         self._election_timeout = 0  # type: float
         self.outbox = []  # type: List[Message]
@@ -86,20 +88,19 @@ class Leader(Server):
     def __init__(
         self,
         name: str,
-        log: Log,
         peers: List[str],
+        log: Log,
         currentTerm: int,
         votedFor: Optional[str],
     ):
-        super().__init__(name, log, currentTerm, votedFor)
-        self.peers = peers
+        super().__init__(name, peers, log, currentTerm, votedFor)
 
         # Raft leader volatile state
         self.nextIndex = {
             server_name: self.log.lastLogIndex + 1 for server_name in self.peers
         }  # type: Dict[str, int]
         self.matchIndex = {
-            server_name: 0 for server_name in self.peers
+            server_name: 0 for server_name in self.peers if server_name != self.name
         }  # type: Dict[str, int]
 
 
@@ -133,7 +134,7 @@ class Leader(Server):
             self._last_heartbeat = now
             self.outbox.extend(
                 Message(frm=self.name, to=s, cmd=self._heartbeat_for(s))
-                for s in self.peers
+                for s in self.peers if s != self.name
             )
 
     def handle_message(self, msg: Message) -> None:
@@ -203,4 +204,4 @@ class Leader(Server):
             leaderCommit=0,
             entries=[new_entry],
         )
-        self.outbox.extend(Message(frm=self.name, to=s, cmd=ae) for s in self.peers)
+        self.outbox.extend(Message(frm=self.name, to=s, cmd=ae) for s in self.peers if s != self.name)
