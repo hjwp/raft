@@ -158,7 +158,6 @@ def test_append_entries_failed_response_to_heartbeat():
     assert s.outbox == [Message(frm="S2", to="S1", cmd=expected_response)]
 
 
-@pytest.mark.xfail
 def test_clock_tick_does_nothing_by_default():
     term = 2
     s = Follower(

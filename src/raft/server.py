@@ -1,3 +1,4 @@
+import random
 from typing import Dict, List, Optional
 from raft.log import Log, Entry
 from raft.messages import (
@@ -22,9 +23,8 @@ class Server:
     ):
         self.name = name
         self.peers = peers
-        self.now = now
         self._last_heartbeat = 0  # type: float
-        self._election_timeout = 0  # type: float
+        self._reset_election_timeout(now)
         self.outbox = []  # type: List[Message]
 
         # Raft persistent state
@@ -35,6 +35,10 @@ class Server:
         # Raft volatile state
         self.commitIndex = 0
         self.lastApplied = 0
+
+    def _reset_election_timeout(self, now: float) -> None:
+        jitter = random.randint(0, int(ELECTION_TIMEOUT_JITTER * 1000)) / 1000.0
+        self._election_timeout = now + MIN_ELECTION_TIMEOUT + jitter
 
     def handle_message(self, msg: Message):
         raise NotImplementedError
