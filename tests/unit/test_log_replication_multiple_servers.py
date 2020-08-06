@@ -94,6 +94,7 @@ def test_replication_backtracking():
     raftnet.dispatch(client_set)
 
     for i in range(1, 11):  # IDEA: while raftnet.messages?
+        print(f'*** --- CLOCK TIIIIICK {i} --- ***')
         clock_tick(leader, raftnet, i)
         clock_tick(f1, raftnet, i)
         clock_tick(f2, raftnet, i)

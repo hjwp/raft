@@ -36,8 +36,9 @@ class Server:
 class Follower(Server):
 
     def handle_message(self, msg: Message) -> None:
-        print(f'{self.name} handling {msg.cmd.__class__.__name__} from {msg.frm}')
         if isinstance(msg.cmd, AppendEntries):
+            kvcmd = msg.cmd.entries[0].cmd if msg.cmd.entries else 'HeArtBeAt'
+            print(f'{self.name} handling AppendEntries({kvcmd}) from {msg.frm}')
             self._handle_append_entries(frm=msg.frm, cmd=msg.cmd)
 
     def _handle_append_entries(self, frm: str, cmd: AppendEntries) -> None:
@@ -127,6 +128,7 @@ class Leader(Server):
 
         if isinstance(msg.cmd, AppendEntriesFailed):
             self.matchIndex[msg.frm] -= 1
+            assert self.matchIndex[msg.frm] >= 0
             to_resend = self.log.entry_at(self.matchIndex[msg.frm])
             print(f'{msg.frm} failed, resending entry at {self.matchIndex[msg.frm]}')
             prevLogIndex = self.matchIndex[msg.frm] - 1

@@ -31,7 +31,7 @@ def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
     ]
 
 
-def test_successful_appendentries_response_increments_matchIndex_last_entry_case():
+def test_successful_appendentries_response_updates_matchIndex_last_entry_case():
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
@@ -42,6 +42,23 @@ def test_successful_appendentries_response_increments_matchIndex_last_entry_case
     )
     assert s.matchIndex["S2"] == 2
     assert s.outbox == []
+
+def test_duplicate_appendentries_responses_do_not_double_increment_matchindex():
+    peers = ["S2", "S3", "S4", "S5"]
+    old_entries = [
+        Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2"), Entry(term=2, cmd='old=3')
+    ]
+    log = InMemoryLog(old_entries)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
+    s.matchIndex["S2"] == 1  # arbitrarily
+    s.handle_message(
+        Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
+    )
+    assert s.matchIndex["S2"] == 2
+    s.handle_message(
+        Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
+    )
+    assert s.matchIndex["S2"] == 2
 
 def test_failed_appendentries_decrements_matchindex_and_adds_new_AppendEntries_to_outbox():
     peers = ["S2", "S3", "S4", "S5"]
@@ -66,6 +83,31 @@ def test_failed_appendentries_decrements_matchindex_and_adds_new_AppendEntries_t
         )
     ]
 
+@pytest.mark.xfail
+def test_duplicate_failed_appendentries_do_not_double_decrement_or_double_reappend():
+    peers = ["S2", "S3", "S4", "S5"]
+    old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
+    log = InMemoryLog(old_entries)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
+    s.matchIndex["S2"] = 2  # arbitrarily
+    s.handle_message(Message(frm="S2", to="S1", cmd=AppendEntriesFailed(term=2)))
+    assert s.matchIndex["S2"] == 1
+    s.handle_message(Message(frm="S2", to="S1", cmd=AppendEntriesFailed(term=2)))
+    assert s.matchIndex["S2"] == 1
+    assert s.outbox == [
+        Message(
+            frm="S1",
+            to="S2",
+            cmd=AppendEntries(
+                term=2,
+                leaderId="S1",
+                prevLogIndex=0,
+                prevLogTerm=0,
+                leaderCommit=0,
+                entries=[old_entries[0]],
+            ),
+        )
+    ]
 
 def test_successful_appendentries_response_adds_AppendEntries_if_matchIndex_lower_than_lastIndex():
     peers = ["S2", "S3", "S4", "S5"]
