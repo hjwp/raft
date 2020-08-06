@@ -45,7 +45,6 @@ class Server:
         if hasattr(msg.cmd, 'term') and msg.cmd.term > self.currentTerm:
             self.currentTerm = msg.cmd.term
             self._become_follower()
-            return
         self._handle_message(msg)
 
     def _handle_message(self, msg: Message) -> None:
