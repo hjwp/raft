@@ -174,13 +174,12 @@ def test_clock_tick_does_nothing_by_default():
     assert s.outbox == []
 
 
-@pytest.mark.xfail
 def test_calls_election_if_clock_tick_past_election_timeout():
     log = [Entry(2, "foo=1"), Entry(3, "foo=2")]
     f = Follower(
         name="S2",
         peers=["S1", "S2", "S3"],
-        now=1,
+        now=0,
         log=InMemoryLog(log),
         currentTerm=3,
         votedFor=None,
@@ -194,11 +193,20 @@ def test_calls_election_if_clock_tick_past_election_timeout():
     f.clock_tick(past_timeout)
 
     assert f.currentTerm == 4
-    assert f.outbox == [
+    expected_messages = [
         Message(
             frm="S2",
-            to=s,
+            to="S1",
             cmd=RequestVote(term=4, candidateId="S2", lastLogIndex=2, lastLogTerm=3),
-        )
-        for s in f.peers
+        ),
+        Message(
+            frm="S2",
+            to="S3",
+            cmd=RequestVote(term=4, candidateId="S2", lastLogIndex=2, lastLogTerm=3),
+        ),
     ]
+    assert f.outbox == expected_messages
+
+    a_tiny_amount_of_time = 0.001
+    f.clock_tick(past_timeout + a_tiny_amount_of_time)
+    assert f.outbox == expected_messages  # ie no change

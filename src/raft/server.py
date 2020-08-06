@@ -47,18 +47,23 @@ class Server:
         raise NotImplementedError
 
 
-
 MIN_ELECTION_TIMEOUT = 0.15
 ELECTION_TIMEOUT_JITTER = 0.15
 
 
 class Follower(Server):
-
     def clock_tick(self, now: float):
         if now > self._election_timeout:
+            self.currentTerm += 1
+            self._reset_election_timeout(now)
             self.outbox.extend(
-                Message(frm=self.name, to=p, cmd=RequestVote(term=self.currentTerm, candidateId=self.name, lastLogIndex=self.log.lastLogIndex, lastLogTerm=self.log.last_log_term))
-                for p in self.peers
+                Message(frm=self.name, to=p, cmd=RequestVote(
+                    term=self.currentTerm,
+                    candidateId=self.name,
+                    lastLogIndex=self.log.lastLogIndex,
+                    lastLogTerm=self.log.last_log_term,
+                ))
+                for p in self.peers if p != self.name
             )
 
     def handle_message(self, msg: Message) -> None:
@@ -109,12 +114,11 @@ class Leader(Server):
 
         # Raft leader volatile state
         self.nextIndex = {
-            server_name: self.log.lastLogIndex + 1 for server_name in self.peers
+            server_name: self.log.lastLogIndex + 1 for server_name in self.peers if server_name != self.name
         }  # type: Dict[str, int]
         self.matchIndex = {
             server_name: 0 for server_name in self.peers if server_name != self.name
         }  # type: Dict[str, int]
-
 
     def _heartbeat_for(self, follower) -> AppendEntries:
         prevLogIndex = self.nextIndex[follower] - 1
@@ -146,7 +150,8 @@ class Leader(Server):
             self._last_heartbeat = now
             self.outbox.extend(
                 Message(frm=self.name, to=s, cmd=self._heartbeat_for(s))
-                for s in self.peers if s != self.name
+                for s in self.peers
+                if s != self.name
             )
 
     def handle_message(self, msg: Message) -> None:
@@ -216,4 +221,6 @@ class Leader(Server):
             leaderCommit=0,
             entries=[new_entry],
         )
-        self.outbox.extend(Message(frm=self.name, to=s, cmd=ae) for s in self.peers if s != self.name)
+        self.outbox.extend(
+            Message(frm=self.name, to=s, cmd=ae) for s in self.peers if s != self.name
+        )

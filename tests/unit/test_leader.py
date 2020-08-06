@@ -10,7 +10,7 @@ from raft.messages import (
 )
 
 def test_init():
-    peers = ["S2", "S3"]
+    peers = ["S1", "S2", "S3"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
@@ -19,7 +19,7 @@ def test_init():
 
 
 def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
@@ -36,12 +36,12 @@ def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
         entries=[expected_entry],
     )
     assert s.outbox == [
-        Message(frm="S1", to=s, cmd=expected_appendentries) for s in peers
+        Message(frm="S1", to=s, cmd=expected_appendentries) for s in peers if s != "S1"
     ]
 
 
 def test_successful_appendentries_response_updates_matchIndex_last_entry_case():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
@@ -57,7 +57,7 @@ def test_successful_appendentries_response_updates_matchIndex_last_entry_case():
 
 
 def test_successful_appendentries_cannot_take_nextIndex_past_end():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
@@ -70,7 +70,7 @@ def test_successful_appendentries_cannot_take_nextIndex_past_end():
 
 
 def test_duplicate_appendentries_responses_do_not_double_increment_index_counters():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [
         Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2"), Entry(term=2, cmd='old=3')
     ]
@@ -91,7 +91,7 @@ def test_duplicate_appendentries_responses_do_not_double_increment_index_counter
 
 
 def test_failed_appendentries_decrements_nextindex_and_adds_new_AppendEntries_to_outbox():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
@@ -117,7 +117,7 @@ def test_failed_appendentries_decrements_nextindex_and_adds_new_AppendEntries_to
 
 
 def test_failed_appendentries_cannot_take_nextIndex_below_one():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
@@ -129,7 +129,7 @@ def test_failed_appendentries_cannot_take_nextIndex_below_one():
 
 @pytest.mark.xfail
 def test_duplicate_failed_appendentries_do_not_double_decrement_or_double_reappend():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
@@ -159,7 +159,7 @@ def test_duplicate_failed_appendentries_do_not_double_decrement_or_double_reappe
     ]
 
 def test_successful_appendentries_response_adds_AppendEntries_if_matchIndex_lower_than_lastIndex():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
@@ -185,7 +185,7 @@ def test_successful_appendentries_response_adds_AppendEntries_if_matchIndex_lowe
 
 
 def test_clock_tick_gives_first_heartbeat():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
@@ -201,12 +201,12 @@ def test_clock_tick_gives_first_heartbeat():
         entries=[],
     )
     assert s.outbox == [
-        Message(frm="S1", to=s, cmd=expected_appendentries) for s in peers
+        Message(frm="S1", to=s, cmd=expected_appendentries) for s in peers if s != "S1"
     ]
 
 
 def test_heartbeat_is_custom_for_each_follower_based_on_nextIndex():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
@@ -257,7 +257,7 @@ def test_heartbeat_is_custom_for_each_follower_based_on_nextIndex():
     ]
 
 def test_heartbeat_only_appears_once_per_interval():
-    peers = ["S2", "S3", "S4", "S5"]
+    peers = ["S1", "S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
