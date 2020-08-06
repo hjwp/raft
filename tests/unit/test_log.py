@@ -118,6 +118,18 @@ def test_valid_overwrite_in_the_middle_of_the_log_kills_all_later_ones():
     assert result is True
 
 
+def test_do_not_overwrite_if_new_entry_matches():
+    old_log = [
+        Entry(term=1, cmd="foo=1"),
+        Entry(term=1, cmd="foo=2"),
+        Entry(term=1, cmd="foo=3"),
+    ]
+    log = InMemoryLog(old_log)
+    new_entry = old_log[1]
+    result = log.add_entry(new_entry, prevLogIndex=1, prevLogTerm=1, leaderCommit=0)
+    assert log.read() == old_log
+    assert result is True
+
 
 def test_check_log_happy_path():
     old_entry = Entry(term=1, cmd="foo=1")

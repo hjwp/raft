@@ -54,7 +54,9 @@ class InMemoryLog:
         return 0 < index <= len(self._log)
 
     def _replace_at(self, index: int, entry: Entry) -> None:
-        """1-based index. truncates any after"""
+        """1-based index. truncates any after, unless entry matches"""
+        if self._has_entry_at(index) and self.entry_at(index) == entry:
+            return
         self._log = self._log[:index - 1] + [entry]
 
     @property
