@@ -8,7 +8,7 @@ import socket
 import threading
 
 from raft.messages import Message
-from . import transport
+from raft.adapters import transport
 
 
 def _tid() -> str:
