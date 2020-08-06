@@ -282,3 +282,11 @@ def test_heartbeat_only_appears_once_per_interval():
     next_one = just_after + HEARTBEAT_FREQUENCY + 0.001
     s.clock_tick(next_one)
     assert len(s.outbox) == 8
+
+@pytest.mark.xfail
+def test_becoming_follower_should_reset_matchindex_and_nextIndex(self):
+    assert 0, 'todo'
+
+@pytest.mark.xfail
+def test_becoming_leader_should_reset_matchindex_and_nextIndex(self):
+    assert 0, 'todo'
