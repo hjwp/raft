@@ -8,6 +8,7 @@ from raft.messages import (
     AppendEntriesFailed,
     ClientSetCommand,
     RequestVote,
+    VoteGranted,
     VoteDenied,
 )
 
@@ -78,9 +79,9 @@ class Follower(Server):
         if isinstance(msg.cmd, AppendEntries):
             kvcmd = msg.cmd.entries[0].cmd if msg.cmd.entries else "HeArtBeAt"
             print(f"{self.name} handling AppendEntries({kvcmd}) from {msg.frm}")
-            self._handle_append_entries(frm=msg.frm, cmd=msg.cmd)
+            self._handle_AppendEntries(frm=msg.frm, cmd=msg.cmd)
 
-    def _handle_append_entries(self, frm: str, cmd: AppendEntries) -> None:
+    def _handle_AppendEntries(self, frm: str, cmd: AppendEntries) -> None:
         if not self.log.check_log(
             cmd.prevLogIndex, cmd.prevLogTerm
         ):  # TODO: this is rough. lets convert to appendentries taking a list.
@@ -269,21 +270,42 @@ class Follower(Server):
         if isinstance(msg.cmd, AppendEntries):
             kvcmd = msg.cmd.entries[0].cmd if msg.cmd.entries else "HeArtBeAt"
             print(f"{self.name} handling AppendEntries({kvcmd}) from {msg.frm}")
-            self._handle_append_entries(frm=msg.frm, cmd=msg.cmd)
+            self._handle_AppendEntries(frm=msg.frm, cmd=msg.cmd)
 
         if isinstance(msg.cmd, RequestVote):
-            self._handle_request_vote(frm=msg.frm, cmd=msg.cmd)
+            self._handle_RequestVote(frm=msg.frm, cmd=msg.cmd)
 
-    def _handle_request_vote(self, frm: str, cmd: RequestVote) -> None:
-        self.outbox.append(
-            Message(
-                frm=self.name,
-                to=frm,
-                cmd=VoteDenied(term=self.currentTerm),
+    def _handle_RequestVote(self, frm: str, cmd: RequestVote) -> None:
+        if self._should_grant_vote(cmd):
+            self.outbox.append(
+                Message(
+                    frm=self.name,
+                    to=frm,
+                    cmd=VoteGranted()
+                )
             )
-        )
+        else:
+            self.outbox.append(
+                Message(
+                    frm=self.name,
+                    to=frm,
+                    cmd=VoteDenied(term=self.currentTerm),
+                )
+            )
 
-    def _handle_append_entries(self, frm: str, cmd: AppendEntries) -> None:
+    def _should_grant_vote(self, cmd: RequestVote) -> bool:
+        if cmd.term < self.currentTerm:
+            return False
+        if cmd.lastLogTerm < self.log.last_log_term:
+            return False
+        if cmd.lastLogIndex < self.log.lastLogIndex:
+            return False
+        if self.votedFor and self.votedFor != cmd.candidateId:
+            return False
+        return True
+
+
+    def _handle_AppendEntries(self, frm: str, cmd: AppendEntries) -> None:
         if not self.log.check_log(
             cmd.prevLogIndex, cmd.prevLogTerm
         ):  # TODO: this is rough. lets convert to appendentries taking a list.
