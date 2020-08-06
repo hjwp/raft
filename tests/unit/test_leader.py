@@ -1,5 +1,5 @@
 import pytest
-from raft.server import Server, Leader
+from raft.server import Server, Leader, HEARTBEAT_FREQUENCY
 from raft.log import InMemoryLog, Entry
 from raft.messages import (
     AppendEntries,
@@ -93,6 +93,23 @@ def test_successful_appendentries_response_adds_AppendEntries_if_matchIndex_lowe
     ]
 
 
-@pytest.mark.xfail
-def test_successful_appendentries_response_when_follower_still_catching_up():
-    assert 0, "todo"
+def test_clock_tick_gives_first_heartbeat():
+    peers = ["S2", "S3", "S4", "S5"]
+    old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
+    log = InMemoryLog(old_entries)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
+    s.clock_tick(now=2)
+    assert 2 - 1 > HEARTBEAT_FREQUENCY
+
+    expected_appendentries = AppendEntries(
+        term=2,
+        leaderId="S1",
+        prevLogIndex=2,
+        prevLogTerm=2,
+        leaderCommit=0,
+        entries=[],
+    )
+    assert s.outbox == [
+        Message(frm="S1", to=s, cmd=expected_appendentries) for s in peers
+    ]
+

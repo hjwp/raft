@@ -41,19 +41,19 @@ class Follower(Server):
             self._handle_append_entries(frm=msg.frm, cmd=msg.cmd)
 
     def _handle_append_entries(self, frm: str, cmd: AppendEntries) -> None:
+        if not self.log.check_log(cmd.prevLogIndex, cmd.prevLogTerm):  # TODO: this is rough. lets convert to appendentries taking a list.
+            self.outbox.append(
+                Message(
+                    frm=self.name,
+                    to=frm,
+                    cmd=AppendEntriesFailed(term=self.currentTerm),
+                )
+            )
+            return
         for entry in cmd.entries:
-            success = self.log.add_entry(
+            assert self.log.add_entry(
                 entry, cmd.prevLogIndex, cmd.prevLogTerm, cmd.leaderCommit
             )
-            if not success:
-                self.outbox.append(
-                    Message(
-                        frm=self.name,
-                        to=frm,
-                        cmd=AppendEntriesFailed(term=self.currentTerm),
-                    )
-                )
-                return
         self.outbox.append(
             Message(
                 frm=self.name,
@@ -62,6 +62,8 @@ class Follower(Server):
             )
         )
 
+
+HEARTBEAT_FREQUENCY = 0.2
 
 class Leader(Server):
     def __init__(
@@ -87,6 +89,20 @@ class Leader(Server):
         self.matchIndex = {
             server_name: self.log.lastLogIndex for server_name in self.peers
         }  # type: Dict[str, int]
+
+
+    def clock_tick(self, now: float) -> None:
+        prevLogIndex = self.log.lastLogIndex
+        prevLogTerm = self.log.last_log_term
+        ae = AppendEntries(
+            term=self.currentTerm,
+            leaderId=self.name,
+            prevLogIndex=prevLogIndex,
+            prevLogTerm=prevLogTerm,
+            leaderCommit=0,
+            entries=[],
+        )
+        self.outbox.extend(Message(frm=self.name, to=s, cmd=ae) for s in self.peers)
 
 
     def handle_message(self, msg: Message) -> None:
