@@ -1,26 +1,10 @@
 import pytest
 from typing import List
+from raft.adapters.network import FakeRaftNetwork
 from raft.adapters.run_server import clock_tick
 from raft.log import InMemoryLog, Entry
 from raft.messages import Message, ClientSetCommand
 from raft.server import Leader, Follower
-
-
-class FakeRaftNetwork:
-    def __init__(self, messages: List[Message]):
-        self._messages = messages
-
-    def get_messages(self, to: str) -> List[Message]:
-        """retrieve messages for someone, and take them out of the network"""
-        theirs = [m for m in self._messages if m.to == to]
-        for m in theirs:
-            self._messages.remove(m)
-        return theirs
-
-    def dispatch(self, msg: Message) -> None:
-        """put the message into the network"""
-        self._messages.append(msg)
-
 
 def test_replication_one_server_simple_case():
     leader = Leader(
