@@ -55,6 +55,7 @@ def test_successful_appendentries_response_updates_matchIndex_last_entry_case():
     assert s.nextIndex["S2"] == 3
     assert s.outbox == []
 
+
 def test_successful_appendentries_cannot_take_nextIndex_past_end():
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
@@ -89,14 +90,16 @@ def test_duplicate_appendentries_responses_do_not_double_increment_index_counter
     assert s.nextIndex["S2"] == 3
 
 
-def test_failed_appendentries_decrements_matchindex_and_adds_new_AppendEntries_to_outbox():
+def test_failed_appendentries_decrements_nextindex_and_adds_new_AppendEntries_to_outbox():
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
     s.matchIndex["S2"] = 2  # arbitrarily
+    s.nextIndex["S2"] = 2  # arbitrarily
     s.handle_message(Message(frm="S2", to="S1", cmd=AppendEntriesFailed(term=2)))
-    assert s.matchIndex["S2"] == 1
+    assert s.matchIndex["S2"] == 2  # should not move
+    assert s.nextIndex["S2"] == 1
     assert s.outbox == [
         Message(
             frm="S1",
@@ -112,17 +115,34 @@ def test_failed_appendentries_decrements_matchindex_and_adds_new_AppendEntries_t
         )
     ]
 
+
+def test_failed_appendentries_cannot_take_nextIndex_below_one():
+    peers = ["S2", "S3", "S4", "S5"]
+    old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
+    log = InMemoryLog(old_entries)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
+    s.nextIndex["S2"] = 1
+
+    s.handle_message(Message(frm="S2", to="S1", cmd=AppendEntriesFailed(term=2)))
+    assert s.nextIndex["S2"] == 1
+
+
 @pytest.mark.xfail
 def test_duplicate_failed_appendentries_do_not_double_decrement_or_double_reappend():
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
+    s.nextIndex["S2"] = 3
     s.matchIndex["S2"] = 2  # arbitrarily
+
     s.handle_message(Message(frm="S2", to="S1", cmd=AppendEntriesFailed(term=2)))
-    assert s.matchIndex["S2"] == 1
+    assert s.matchIndex["S2"] == 2
+    assert s.nextIndex["S2"] == 2
+
     s.handle_message(Message(frm="S2", to="S1", cmd=AppendEntriesFailed(term=2)))
-    assert s.matchIndex["S2"] == 1
+    assert s.matchIndex["S2"] == 2
+    assert s.nextIndex["S2"] == 2  # do we care?
     assert s.outbox == [
         Message(
             frm="S1",
@@ -182,5 +202,57 @@ def test_clock_tick_gives_first_heartbeat():
     )
     assert s.outbox == [
         Message(frm="S1", to=s, cmd=expected_appendentries) for s in peers
+    ]
+
+
+def test_heartbeat_is_custom_for_each_follower_based_on_nextIndex():
+    peers = ["S2", "S3", "S4", "S5"]
+    old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
+    log = InMemoryLog(old_entries)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
+    s.nextIndex['S2'] = 1
+    s.nextIndex['S3'] = 2
+    s.nextIndex['S4'] = 3
+    s.nextIndex['S5'] = 3
+    s.clock_tick(now=2)
+    assert 2 - 1 > HEARTBEAT_FREQUENCY
+
+    assert s.outbox == [
+        Message(
+            frm='S1', to='S2', cmd=AppendEntries(
+            term=2,
+            leaderId="S1",
+            prevLogIndex=0,
+            prevLogTerm=0,
+            leaderCommit=0,
+            entries=[],
+        )),
+        Message(
+            frm='S1', to='S3', cmd=AppendEntries(
+            term=2,
+            leaderId="S1",
+            prevLogIndex=1,
+            prevLogTerm=1,
+            leaderCommit=0,
+            entries=[],
+        )),
+        Message(
+            frm='S1', to='S4', cmd=AppendEntries(
+            term=2,
+            leaderId="S1",
+            prevLogIndex=2,
+            prevLogTerm=2,
+            leaderCommit=0,
+            entries=[],
+        )),
+        Message(
+            frm='S1', to='S5', cmd=AppendEntries(
+            term=2,
+            leaderId="S1",
+            prevLogIndex=2,
+            prevLogTerm=2,
+            leaderCommit=0,
+            entries=[],
+        )),
     ]
 

@@ -94,10 +94,10 @@ class Leader(Server):
         }  # type: Dict[str, int]
 
 
-    def clock_tick(self, now: float) -> None:
-        prevLogIndex = self.log.lastLogIndex
-        prevLogTerm = self.log.last_log_term
-        ae = AppendEntries(
+    def _heartbeat_for(self, follower) -> AppendEntries:
+        prevLogIndex = self.nextIndex[follower] - 1
+        prevLogTerm = self.log.entry_term(prevLogIndex)
+        return AppendEntries(
             term=self.currentTerm,
             leaderId=self.name,
             prevLogIndex=prevLogIndex,
@@ -105,7 +105,25 @@ class Leader(Server):
             leaderCommit=0,
             entries=[],
         )
-        self.outbox.extend(Message(frm=self.name, to=s, cmd=ae) for s in self.peers)
+
+    def _next_entry_for(self, follower) -> AppendEntries:
+        prevLogIndex = self.nextIndex[follower] - 1
+        prevLogTerm = self.log.entry_term(prevLogIndex)
+        entry = self.log.entry_at(self.nextIndex[follower])
+        return AppendEntries(
+            term=self.currentTerm,
+            leaderId=self.name,
+            prevLogIndex=prevLogIndex,
+            prevLogTerm=prevLogTerm,
+            leaderCommit=0,
+            entries=[entry],
+        )
+
+    def clock_tick(self, now: float) -> None:
+        self.outbox.extend(
+            Message(frm=self.name, to=s, cmd=self._heartbeat_for(s))
+            for s in self.peers
+        )
 
     def handle_message(self, msg: Message) -> None:
         print(f"{self.name} handling {msg.cmd.__class__.__name__} from {msg.frm}")
@@ -135,11 +153,10 @@ class Leader(Server):
                 )
 
         if isinstance(msg.cmd, AppendEntriesFailed):
-            self.matchIndex[msg.frm] -= 1
-            assert self.matchIndex[msg.frm] >= 0
-            to_resend = self.log.entry_at(self.matchIndex[msg.frm])
-            print(f"{msg.frm} failed, resending entry at {self.matchIndex[msg.frm]}")
-            prevLogIndex = self.matchIndex[msg.frm] - 1
+            self.nextIndex[msg.frm] = max(self.nextIndex[msg.frm] - 1, 1)
+            index_to_resend = self.nextIndex[msg.frm]
+            print(f"{msg.frm} failed, resending entry at {index_to_resend}")
+            prevLogIndex = index_to_resend - 1
             prevLogTerm = self.log.entry_term(prevLogIndex)
             self.outbox.append(
                 Message(
@@ -151,7 +168,7 @@ class Leader(Server):
                         prevLogIndex=prevLogIndex,
                         prevLogTerm=prevLogTerm,
                         leaderCommit=0,
-                        entries=[to_resend],
+                        entries=[self.log.entry_at(index_to_resend)],
                     ),
                 )
             )
