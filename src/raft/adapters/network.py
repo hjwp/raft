@@ -29,7 +29,7 @@ class RaftNetwork(Protocol):
 
 def receive_message(sock: socket.socket) -> Message:
     raw = transport.recv_message(sock)
-    result = pickle.loads(raw)
+    result = pickle.loads(raw)  # TODO: messages include user-submitted data. so this is terrible
     assert isinstance(result, Message)
     return result
 
