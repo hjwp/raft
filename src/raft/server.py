@@ -6,6 +6,7 @@ from raft.messages import (
     AppendEntriesSucceeded,
     AppendEntriesFailed,
     ClientSetCommand,
+    RequestVote,
 )
 
 
@@ -48,7 +49,11 @@ ELECTION_TIMEOUT_JITTER = 0.15
 class Follower(Server):
 
     def clock_tick(self, now: float):
-        pass  # TODO
+        if now > self._election_timeout:
+            self.outbox.extend(
+                Message(frm=self.name, to=p, cmd=RequestVote(term=self.currentTerm, candidateId=self.name, lastLogIndex=self.log.lastLogIndex, lastLogTerm=self.log.last_log_term))
+                for p in self.peers
+            )
 
     def handle_message(self, msg: Message) -> None:
         if isinstance(msg.cmd, AppendEntries):

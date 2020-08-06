@@ -1,11 +1,13 @@
 import pytest
-from raft.server import Follower
+from raft.server import Follower, ELECTION_TIMEOUT_JITTER, MIN_ELECTION_TIMEOUT
 from raft.log import InMemoryLog, Entry
 from raft.messages import (
     AppendEntries,
     AppendEntriesSucceeded,
     AppendEntriesFailed,
+    RequestVote,
     Message,
+
 )
 
 
@@ -121,21 +123,27 @@ def test_append_entries_failed_response_to_heartbeat():
 
 
 def test_clock_tick_does_nothing_by_default():
-    s = Follower(name="S2", peers=["S1", "S2", "S3"], log=InMemoryLog([]), currentTerm=2, votedFor=None)
-    s.clock_tick(now=1.001)
+    term = 2
+    s = Follower(name="S2", peers=["S1", "S2", "S3"], log=InMemoryLog([]), currentTerm=term, votedFor=None)
+    a_tiny_amount_of_time = 0.001
+    s.clock_tick(a_tiny_amount_of_time)
+    assert s.currentTerm == term
     assert s.outbox == []
 
 
-@pytest.mark.xfail
 def test_calls_election_if_clock_tick_past_election_timeout():
     log = [Entry(2, 'foo=1'), Entry(3, 'foo=2')]
     f = Follower(name="S2", peers=["S1", "S2", "S3"], log=InMemoryLog(log), currentTerm=3, votedFor=None)
-    f.clock_tick(now=1.001)
+    a_tiny_amount_of_time = 0.001
+    f.clock_tick(a_tiny_amount_of_time)
     assert f.outbox == []
-    f.clock_tick(now=2)
-    assert f.term == 4
+
+    past_timeout = 1
+    assert MIN_ELECTION_TIMEOUT + ELECTION_TIMEOUT_JITTER < past_timeout
+    f.clock_tick(past_timeout)
+
+    assert f.currentTerm == 4
     assert f.outbox == [
         Message(frm="S2", to=s, cmd=RequestVote(term=4, candidateId="S2", lastLogIndex=2, lastLogTerm=3))
         for s in f.peers
-
     ]
