@@ -19,6 +19,8 @@ class Server:
         votedFor: Optional[str],
     ):
         self.name = name
+        self.now = now  # TODO: do we actually need this?
+        self._last_heartbeat = 0  # type: float
         self.outbox = []  # type: List[Message]
 
         # Raft persistent state
@@ -120,10 +122,12 @@ class Leader(Server):
         )
 
     def clock_tick(self, now: float) -> None:
-        self.outbox.extend(
-            Message(frm=self.name, to=s, cmd=self._heartbeat_for(s))
-            for s in self.peers
-        )
+        if now > (self._last_heartbeat + HEARTBEAT_FREQUENCY):
+            self._last_heartbeat = now
+            self.outbox.extend(
+                Message(frm=self.name, to=s, cmd=self._heartbeat_for(s))
+                for s in self.peers
+            )
 
     def handle_message(self, msg: Message) -> None:
         print(f"{self.name} handling {msg.cmd.__class__.__name__} from {msg.frm}")

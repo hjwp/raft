@@ -256,3 +256,29 @@ def test_heartbeat_is_custom_for_each_follower_based_on_nextIndex():
         )),
     ]
 
+def test_heartbeat_only_appears_once_per_interval():
+    peers = ["S2", "S3", "S4", "S5"]
+    old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
+    log = InMemoryLog(old_entries)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
+    s.clock_tick(1)
+    s.outbox[:] = []  # clear outbox
+    too_soon = 1 + HEARTBEAT_FREQUENCY / 2.0
+    s.clock_tick(too_soon)
+    assert s.outbox == []
+    stilL_too_soon = 1 + HEARTBEAT_FREQUENCY - 0.001
+    s.clock_tick(stilL_too_soon)
+    assert s.outbox == []
+    just_after = 1 + HEARTBEAT_FREQUENCY + 0.001
+    s.clock_tick(just_after)
+    assert len(s.outbox) == 4
+    two_heartbeats_in_theory = 1 + HEARTBEAT_FREQUENCY * 2
+
+    # test we track time since last heartbeat, rather than from t=0
+    assert two_heartbeats_in_theory < (just_after + HEARTBEAT_FREQUENCY)
+    s.clock_tick(two_heartbeats_in_theory)
+    assert len(s.outbox) == 4
+
+    next_one = just_after + HEARTBEAT_FREQUENCY + 0.001
+    s.clock_tick(next_one)
+    assert len(s.outbox) == 8
