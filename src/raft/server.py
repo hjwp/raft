@@ -114,6 +114,7 @@ class Leader(Server):
 
         if isinstance(msg.cmd, AppendEntriesSucceeded):
             self.matchIndex[msg.frm] = msg.cmd.matchIndex
+            self.nextIndex[msg.frm] = msg.cmd.matchIndex + 1
             if self.matchIndex[msg.frm] < self.log.lastLogIndex:
                 next_to_send = self.log.entry_at(self.matchIndex[msg.frm] + 1)
                 prevLogIndex = self.matchIndex[msg.frm]

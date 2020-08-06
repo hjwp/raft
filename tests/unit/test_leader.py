@@ -46,30 +46,47 @@ def test_successful_appendentries_response_updates_matchIndex_last_entry_case():
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
 
-    s.matchIndex["S2"] == 1  # arbitrarily
+    s.matchIndex["S2"] = 1  # arbitrarily
+    s.nextIndex["S2"] = 2
     s.handle_message(
         Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
     )
     assert s.matchIndex["S2"] == 2
+    assert s.nextIndex["S2"] == 3
     assert s.outbox == []
 
+def test_successful_appendentries_cannot_take_nextIndex_past_end():
+    peers = ["S2", "S3", "S4", "S5"]
+    old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
+    log = InMemoryLog(old_entries)
+    s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
 
-def test_duplicate_appendentries_responses_do_not_double_increment_matchindex():
+    s.nextIndex["S2"] = 3
+    s.handle_message(
+        Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
+    )
+    assert s.nextIndex["S2"] == 3
+
+
+def test_duplicate_appendentries_responses_do_not_double_increment_index_counters():
     peers = ["S2", "S3", "S4", "S5"]
     old_entries = [
         Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2"), Entry(term=2, cmd='old=3')
     ]
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", log=log, now=1, peers=peers, currentTerm=2, votedFor=None)
-    s.matchIndex["S2"] == 1  # arbitrarily
+    s.matchIndex["S2"] = 1  # arbitrarily
+    s.nextIndex["S2"] = 2
     s.handle_message(
         Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
     )
     assert s.matchIndex["S2"] == 2
+    assert s.nextIndex["S2"] == 3
     s.handle_message(
         Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
     )
     assert s.matchIndex["S2"] == 2
+    assert s.nextIndex["S2"] == 3
 
 
 def test_failed_appendentries_decrements_matchindex_and_adds_new_AppendEntries_to_outbox():
