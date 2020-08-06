@@ -42,7 +42,7 @@ class VoteGranted:
 
 
 @dataclass
-class VoteRefused:
+class VoteDenied:
     term: int
 
 
@@ -57,5 +57,5 @@ class Message:
         AppendEntriesFailed,
         RequestVote,
         VoteGranted,
-        VoteRefused,
+        VoteDenied,
     ]

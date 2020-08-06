@@ -1,13 +1,13 @@
 import pytest
 from raft.log import InMemoryLog
 from raft.server import Leader, Follower, Candidate
-from raft.messages import Message, AppendEntries, AppendEntriesFailed, RequestVote, VoteRefused
+from raft.messages import Message, AppendEntries, AppendEntriesFailed, RequestVote, VoteDenied
 
 some_messages = [
     Message(frm="S2", to="S1", cmd=AppendEntries(term=5, leaderId="S2", prevLogIndex=22, prevLogTerm=4, entries=[], leaderCommit=9)),
     Message(frm="S2", to="S1", cmd=AppendEntriesFailed(term=5)),
     Message(frm="S2", to="S1", cmd=RequestVote(term=5, candidateId="S2", lastLogIndex=22, lastLogTerm=4)),
-    Message(frm="S2", to="S1", cmd=VoteRefused(term=5)),
+    Message(frm="S2", to="S1", cmd=VoteDenied(term=5)),
 ]
 @pytest.mark.parametrize('server_class', [Leader, Follower, Candidate])
 @pytest.mark.parametrize('msg', some_messages)

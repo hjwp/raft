@@ -193,6 +193,7 @@ def test_calls_election_if_clock_tick_past_election_timeout():
     f.clock_tick(past_timeout)
 
     assert f.currentTerm == 4
+    assert f.votedFor == "S2"
     expected_messages = [
         Message(
             frm="S2",

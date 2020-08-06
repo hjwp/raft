@@ -8,6 +8,7 @@ from raft.messages import (
     AppendEntriesFailed,
     ClientSetCommand,
     RequestVote,
+    VoteDenied,
 )
 
 
@@ -53,11 +54,9 @@ class Server:
     def clock_tick(self, now: float):
         raise NotImplementedError
 
-
     def _become_candidate(self) -> None:
         self.__class__ = Candidate
         self._call_election()  # pylint: disable=no-member
-
 
     def _become_follower(self) -> None:
         self.__class__ = Follower
@@ -273,6 +272,18 @@ class Follower(Server):
             print(f"{self.name} handling AppendEntries({kvcmd}) from {msg.frm}")
             self._handle_append_entries(frm=msg.frm, cmd=msg.cmd)
 
+        if isinstance(msg.cmd, RequestVote):
+            self._handle_request_vote(frm=msg.frm, cmd=msg.cmd)
+
+    def _handle_request_vote(self, frm: str, cmd: RequestVote) -> None:
+        self.outbox.append(
+            Message(
+                frm=self.name,
+                to=frm,
+                cmd=VoteDenied(term=self.currentTerm),
+            )
+        )
+
     def _handle_append_entries(self, frm: str, cmd: AppendEntries) -> None:
         if not self.log.check_log(
             cmd.prevLogIndex, cmd.prevLogTerm
@@ -297,6 +308,7 @@ class Follower(Server):
             )
         )
 
+
 class Candidate(Server):
 
     def clock_tick(self, now: float) -> None:
@@ -305,6 +317,7 @@ class Candidate(Server):
 
     def _call_election(self):
         self.currentTerm += 1
+        self.votedFor = self.name
         self.outbox.extend(
             Message(frm=self.name, to=p, cmd=RequestVote(
                 term=self.currentTerm,
