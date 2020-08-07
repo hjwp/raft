@@ -54,6 +54,7 @@ class Server:
         print(f"{self.name} handling {msg}")
         if hasattr(msg.cmd, 'term') and msg.cmd.term > self.currentTerm:
             self.currentTerm = msg.cmd.term
+            self.votedFor = None
             self._become_follower()
         self._handle_message(msg)
 

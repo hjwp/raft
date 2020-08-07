@@ -35,9 +35,9 @@ def test_deny_vote_if_lastLogIndex_is_too_low():
     assert msg.cmd == VoteDenied(term=s.currentTerm)
 
 
-def test_deny_vote_if_already_voted_for_someone_else():
+def test_deny_vote_if_already_voted_for_someone_else_in_this_term():
     s = make_follower(votedFor="S3")
-    s.handle_message(make_RequestVote(term=s.currentTerm + 1, lastLogIndex=s.log.lastLogIndex + 1, lastLogTerm=s.log.last_log_term + 1))
+    s.handle_message(make_RequestVote(term=s.currentTerm, lastLogIndex=s.log.lastLogIndex + 1, lastLogTerm=s.log.last_log_term + 1))
     [msg] = s.outbox
     assert msg.cmd == VoteDenied(term=s.currentTerm)
 
