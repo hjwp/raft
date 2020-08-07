@@ -12,6 +12,10 @@ from raft.messages import (
     VoteDenied,
 )
 
+HEARTBEAT_FREQUENCY = 0.2
+MIN_ELECTION_TIMEOUT = 0.15
+ELECTION_TIMEOUT_JITTER = 0.15
+
 
 class Server:
     def __init__(
@@ -61,70 +65,6 @@ class Server:
     def _become_follower(self) -> None:
         self.__class__ = Follower
 
-
-
-MIN_ELECTION_TIMEOUT = 0.15
-ELECTION_TIMEOUT_JITTER = 0.15
-
-
-class Follower(Server):
-
-    def clock_tick(self, now: float):
-        if now > self._election_timeout:
-            self._reset_election_timeout(now)
-            self._become_candidate()
-
-
-    def _handle_message(self, msg: Message) -> None:
-        if isinstance(msg.cmd, AppendEntries):
-            kvcmd = msg.cmd.entries[0].cmd if msg.cmd.entries else "HeArtBeAt"
-            print(f"{self.name} handling AppendEntries({kvcmd}) from {msg.frm}")
-            self._handle_AppendEntries(frm=msg.frm, cmd=msg.cmd)
-
-    def _handle_AppendEntries(self, frm: str, cmd: AppendEntries) -> None:
-        if not self.log.check_log(
-            cmd.prevLogIndex, cmd.prevLogTerm
-        ):  # TODO: this is rough. lets convert to appendentries taking a list.
-            self.outbox.append(
-                Message(
-                    frm=self.name,
-                    to=frm,
-                    cmd=AppendEntriesFailed(term=self.currentTerm),
-                )
-            )
-            return
-        for entry in cmd.entries:
-            assert self.log.add_entry(
-                entry, cmd.prevLogIndex, cmd.prevLogTerm, cmd.leaderCommit
-            )
-        self.outbox.append(
-            Message(
-                frm=self.name,
-                to=frm,
-                cmd=AppendEntriesSucceeded(matchIndex=self.log.lastLogIndex),
-            )
-        )
-
-class Candidate(Server):
-
-    def clock_tick(self, now: float) -> None:
-        pass
-
-
-    def _call_election(self):
-        self.currentTerm += 1
-        self.outbox.extend(
-            Message(frm=self.name, to=p, cmd=RequestVote(
-                term=self.currentTerm,
-                candidateId=self.name,
-                lastLogIndex=self.log.lastLogIndex,
-                lastLogTerm=self.log.last_log_term,
-            ))
-            for p in self.peers if p != self.name
-        )
-
-
-HEARTBEAT_FREQUENCY = 0.2
 
 
 class Leader(Server):
@@ -254,10 +194,6 @@ class Leader(Server):
 
 
 
-MIN_ELECTION_TIMEOUT = 0.15
-ELECTION_TIMEOUT_JITTER = 0.15
-
-
 class Follower(Server):
 
     def clock_tick(self, now: float):
@@ -276,6 +212,7 @@ class Follower(Server):
             self._handle_RequestVote(frm=msg.frm, cmd=msg.cmd)
 
     def _handle_RequestVote(self, frm: str, cmd: RequestVote) -> None:
+        assert frm == cmd.candidateId
         if self._should_grant_vote(cmd):
             self.outbox.append(
                 Message(
@@ -335,10 +272,16 @@ class Candidate(Server):
     def clock_tick(self, now: float) -> None:
         pass
 
+    def _handle_message(self, msg: Message) -> None:
+        if isinstance(msg.cmd, VoteGranted):
+            self._votes.add(msg.frm)
+            if len(self._votes) > len(self.peers) / 2:
+                self._become_leader()
 
     def _call_election(self):
         self.currentTerm += 1
         self.votedFor = self.name
+        self._votes = set([self.votedFor])
         self.outbox.extend(
             Message(frm=self.name, to=p, cmd=RequestVote(
                 term=self.currentTerm,
@@ -349,8 +292,10 @@ class Candidate(Server):
             for p in self.peers if p != self.name
         )
 
+    def _become_leader(self) -> None:
+        self.__class__ = Leader
 
-HEARTBEAT_FREQUENCY = 0.2
+
 
 
 class Leader(Server):
