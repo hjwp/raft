@@ -28,10 +28,12 @@ class RaftNetwork(Protocol):
 class FakeRaftNetwork:
     def __init__(self, messages: List[Message]):
         self._messages = messages
+        self._message_backups = []  # type: List[Message]
 
     def get_messages(self, to: str) -> List[Message]:
         """retrieve messages for someone, and take them out of the network"""
         theirs = [m for m in self._messages if m.to == to]
+        self._message_backups.extend(theirs)
         for m in theirs:
             self._messages.remove(m)
         return theirs

@@ -31,18 +31,30 @@ def test_simple_election():
 
     assert any(isinstance(f, Leader) for f in [f1, f2, f3])
 
-def test_figure_7():
-    servers = figure_7.make_servers()
-    del servers['l']   # oh noes, what will they do without a leader???
 
-    raftnet = FakeRaftNetwork([])
-    start = int(MIN_ELECTION_TIMEOUT * 1000) - 1
-    for i in range(start, start * 3):
-        # print(f"*** --- CLOCK TIIIIICK {i} --- ***")
-        for _, s in servers.items():
-            clock_tick(s, raftnet, i / 1000.0)
+@pytest.mark.xfail
+def test_figure_7_elections_always_get_committed_logs():
+    for _ in range(50):  # do this lots of times to get a few random outcomes
+        servers = figure_7.make_servers()
+        del servers['l']   # oh noes, what will they do without a leader???
 
-    for n, s in servers.items():
-        print(f'Checking log for {s}: {s.log.read()}')
-        terms = [e.term for e in s.log.read()]
-        assert terms[:9] == list(map(int, '1114455666'))
+        raftnet = FakeRaftNetwork([])
+        start_ms = int(MIN_ELECTION_TIMEOUT * 1000) - 1
+        for i in range(start_ms, start_ms * 20):
+            # print(f"*** --- CLOCK TIIIIICK {i} --- ***")
+            for _, s in servers.items():
+                clock_tick(s, raftnet, i / 1000.0)
+
+        new_logs = '\n'.join(
+            f'{n}:{"".join(str(e.term) for e in s.log.read())}'
+            for n, s in servers.items()
+        )
+        print(new_logs)
+        for n, s in servers.items():
+            print(f'Checking log for {s}: {s.log.read()}')
+            terms = [e.term for e in s.log.read()]
+            if terms[:9] != list(map(int, '111445566')):
+                for m in raftnet._message_backups:
+                    if m.to == n or m.frm == n:
+                        print(m)
+            assert terms[:9] == list(map(int, '111445566'))
