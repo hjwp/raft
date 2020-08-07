@@ -8,6 +8,7 @@ class ClientSetCommand:
     guid: str
     cmd: str
 
+
 @dataclass
 class ClientSetSucceeded:
     guid: str

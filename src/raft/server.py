@@ -99,32 +99,6 @@ class Leader(Server):
             server_name: 0 for server_name in self.peers if server_name != self.name
         }  # type: Dict[str, int]
 
-    def _heartbeat_for(self, follower) -> AppendEntries:
-        print(f"making heartbeat for {follower}")
-        prevLogIndex = self.nextIndex[follower] - 1
-        prevLogTerm = self.log.entry_term(prevLogIndex)
-        return AppendEntries(
-            term=self.currentTerm,
-            leaderId=self.name,
-            prevLogIndex=prevLogIndex,
-            prevLogTerm=prevLogTerm,
-            leaderCommit=0,
-            entries=[],
-        )
-
-    def _next_entry_for(self, follower) -> AppendEntries:
-        prevLogIndex = self.nextIndex[follower] - 1
-        prevLogTerm = self.log.entry_term(prevLogIndex)
-        entry = self.log.entry_at(self.nextIndex[follower])
-        return AppendEntries(
-            term=self.currentTerm,
-            leaderId=self.name,
-            prevLogIndex=prevLogIndex,
-            prevLogTerm=prevLogTerm,
-            leaderCommit=0,
-            entries=[entry],
-        )
-
     def clock_tick(self, now: float) -> None:
         self.now = now
         if self.now > (self._last_heartbeat + HEARTBEAT_FREQUENCY):
@@ -201,6 +175,33 @@ class Leader(Server):
             )
         )
 
+    def _heartbeat_for(self, follower) -> AppendEntries:
+        print(f"making heartbeat for {follower}")
+        prevLogIndex = self.nextIndex[follower] - 1
+        prevLogTerm = self.log.entry_term(prevLogIndex)
+        return AppendEntries(
+            term=self.currentTerm,
+            leaderId=self.name,
+            prevLogIndex=prevLogIndex,
+            prevLogTerm=prevLogTerm,
+            leaderCommit=0,
+            entries=[],
+        )
+
+    def _next_entry_for(self, follower) -> AppendEntries:
+        prevLogIndex = self.nextIndex[follower] - 1
+        prevLogTerm = self.log.entry_term(prevLogIndex)
+        entry = self.log.entry_at(self.nextIndex[follower])
+        return AppendEntries(
+            term=self.currentTerm,
+            leaderId=self.name,
+            prevLogIndex=prevLogIndex,
+            prevLogTerm=prevLogTerm,
+            leaderCommit=0,
+            entries=[entry],
+        )
+
+
     def _commit_if_possible(self, matchIndex: int):
         if self.commitIndex > matchIndex:
             return
@@ -209,7 +210,6 @@ class Leader(Server):
             # TODOs:
             # self.log.apply_state_machine_up_to(self.commitIndex)
             # self._send_any_pending_client_responses()
-
 
     def _have_quorum_at(self, matchIndex) -> bool:
         quorum = len(self.peers) // 2
