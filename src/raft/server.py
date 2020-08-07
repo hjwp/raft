@@ -29,8 +29,9 @@ class Server:
     ):
         self.name = name
         self.peers = peers
+        self.now = now
         self._last_heartbeat = 0  # type: float
-        self._reset_election_timeout(now)
+        self._reset_election_timeout()
         self.outbox = []  # type: List[Message]
 
         # Raft persistent state
@@ -42,9 +43,9 @@ class Server:
         self.commitIndex = 0
         self.lastApplied = 0
 
-    def _reset_election_timeout(self, now: float) -> None:
+    def _reset_election_timeout(self) -> None:
         jitter = random.randint(0, int(ELECTION_TIMEOUT_JITTER * 1000)) / 1000.0
-        self._election_timeout = now + MIN_ELECTION_TIMEOUT + jitter
+        self._election_timeout = self.now + MIN_ELECTION_TIMEOUT + jitter
 
     def handle_message(self, msg: Message) -> None:
         if hasattr(msg.cmd, 'term') and msg.cmd.term > self.currentTerm:
@@ -112,8 +113,9 @@ class Leader(Server):
         )
 
     def clock_tick(self, now: float) -> None:
-        if now > (self._last_heartbeat + HEARTBEAT_FREQUENCY):
-            self._last_heartbeat = now
+        self.now = now
+        if self.now > (self._last_heartbeat + HEARTBEAT_FREQUENCY):
+            self._last_heartbeat = self.now
             self.outbox.extend(
                 Message(frm=self.name, to=s, cmd=self._heartbeat_for(s))
                 for s in self.peers
@@ -196,9 +198,10 @@ class Leader(Server):
 class Follower(Server):
 
     def clock_tick(self, now: float):
-        if now > self._election_timeout:
-            print(f'election timeout!  {now} was greater than {self._election_timeout}')
-            self._reset_election_timeout(now)
+        self.now = now
+        if self.now > self._election_timeout:
+            print(f'election timeout!  {self.now} was greater than {self._election_timeout}')
+            self._reset_election_timeout()
             self._become_candidate()
 
 
@@ -243,7 +246,8 @@ class Follower(Server):
 
 
     def _handle_AppendEntries(self, frm: str, cmd: AppendEntries) -> None:
-        # TODO: this is rough. lets convert to appendentries taking a list.
+        # TODO: this log.check_log() is rough.
+        #       lets convert to appendentries taking a list.
         if not self.log.check_log(cmd.prevLogIndex, cmd.prevLogTerm):
             self.outbox.append(
                 Message(
@@ -253,6 +257,7 @@ class Follower(Server):
                 )
             )
             return
+        self._reset_election_timeout()
         for entry in cmd.entries:
             assert self.log.add_entry(
                 entry, cmd.prevLogIndex, cmd.prevLogTerm, cmd.leaderCommit
@@ -275,7 +280,7 @@ class Follower(Server):
 class Candidate(Server):
 
     def clock_tick(self, now: float) -> None:
-        pass
+        self.now = now
 
     def _handle_message(self, msg: Message) -> None:
         if isinstance(msg.cmd, VoteGranted):

@@ -20,7 +20,10 @@ def test_append_entries_adds_to_local_log_and_returns_success_response():
         currentTerm=1,
         votedFor=None,
     )
+    old_timeout = s._election_timeout
+
     new_entry = Entry(term=1, cmd="foo=bar")
+    s.now = 2
     s.handle_message(
         Message(
             frm="S1",
@@ -38,6 +41,7 @@ def test_append_entries_adds_to_local_log_and_returns_success_response():
     assert s.log.read() == [new_entry]
     expected_response = AppendEntriesSucceeded(matchIndex=1)
     assert s.outbox == [Message(frm="S2", to="S1", cmd=expected_response)]
+    assert s._election_timeout > old_timeout
 
 
 def test_append_entries_with_no_entry_aka_heartbeat_at_zero():
@@ -51,6 +55,7 @@ def test_append_entries_with_no_entry_aka_heartbeat_at_zero():
         votedFor=None,
     )
     old_timeout = s._election_timeout
+    s.now = 2
     s.handle_message(
         Message(
             frm="S1",

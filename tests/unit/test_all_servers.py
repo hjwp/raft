@@ -16,3 +16,10 @@ def test_messages_with_higher_term_should_convert_to_follower(server_class, msg)
     s.handle_message(msg)
     assert s.currentTerm == 5
     assert isinstance(s, Follower)
+
+@pytest.mark.parametrize('server_class', [Leader, Follower, Candidate])
+def test_clock_tick_stores_time(server_class):
+    s = server_class("S1", peers=["S1", "S2", "S3"], now=0, log=InMemoryLog([]), currentTerm=4, votedFor=None)
+    assert s.now == 0
+    s.clock_tick(3)
+    assert s.now == 3
