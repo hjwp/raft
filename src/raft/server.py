@@ -59,10 +59,12 @@ class Server:
         raise NotImplementedError
 
     def _become_candidate(self) -> None:
+        print(f'** {self.name} is becoming Candidate **')
         self.__class__ = Candidate
         self._call_election()  # pylint: disable=no-member
 
     def _become_follower(self) -> None:
+        print(f'** {self.name} is becoming a Follower **')
         self.__class__ = Follower
 
 
@@ -78,7 +80,9 @@ class Leader(Server):
         votedFor: Optional[str],
     ):
         super().__init__(name, peers, now, log, currentTerm, votedFor)
+        self._setup_follower_tracking_indexes()
 
+    def _setup_follower_tracking_indexes(self) -> None:
         # Raft leader volatile state
         self.nextIndex = {
             server_name: self.log.lastLogIndex + 1 for server_name in self.peers if server_name != self.name
@@ -293,133 +297,6 @@ class Candidate(Server):
         )
 
     def _become_leader(self) -> None:
+        print(f'** {self.name} is becoming Leader **')
         self.__class__ = Leader
-
-
-
-
-class Leader(Server):
-    def __init__(
-        self,
-        name: str,
-        peers: List[str],
-        now: float,
-        log: Log,
-        currentTerm: int,
-        votedFor: Optional[str],
-    ):
-        super().__init__(name, peers, now, log, currentTerm, votedFor)
-
-        # Raft leader volatile state
-        self.nextIndex = {
-            server_name: self.log.lastLogIndex + 1 for server_name in self.peers if server_name != self.name
-        }  # type: Dict[str, int]
-        self.matchIndex = {
-            server_name: 0 for server_name in self.peers if server_name != self.name
-        }  # type: Dict[str, int]
-
-    def _heartbeat_for(self, follower) -> AppendEntries:
-        prevLogIndex = self.nextIndex[follower] - 1
-        prevLogTerm = self.log.entry_term(prevLogIndex)
-        return AppendEntries(
-            term=self.currentTerm,
-            leaderId=self.name,
-            prevLogIndex=prevLogIndex,
-            prevLogTerm=prevLogTerm,
-            leaderCommit=0,
-            entries=[],
-        )
-
-    def _next_entry_for(self, follower) -> AppendEntries:
-        prevLogIndex = self.nextIndex[follower] - 1
-        prevLogTerm = self.log.entry_term(prevLogIndex)
-        entry = self.log.entry_at(self.nextIndex[follower])
-        return AppendEntries(
-            term=self.currentTerm,
-            leaderId=self.name,
-            prevLogIndex=prevLogIndex,
-            prevLogTerm=prevLogTerm,
-            leaderCommit=0,
-            entries=[entry],
-        )
-
-    def clock_tick(self, now: float) -> None:
-        if now > (self._last_heartbeat + HEARTBEAT_FREQUENCY):
-            self._last_heartbeat = now
-            self.outbox.extend(
-                Message(frm=self.name, to=s, cmd=self._heartbeat_for(s))
-                for s in self.peers
-                if s != self.name
-            )
-
-    def _handle_message(self, msg: Message) -> None:
-        print(f"{self.name} handling {msg.cmd.__class__.__name__} from {msg.frm}")
-        if isinstance(msg.cmd, ClientSetCommand):
-            self._handle_client_set(cmd=msg.cmd.cmd)
-
-        if isinstance(msg.cmd, AppendEntriesSucceeded):
-            self.matchIndex[msg.frm] = msg.cmd.matchIndex
-            self.nextIndex[msg.frm] = msg.cmd.matchIndex + 1
-            if self.matchIndex[msg.frm] < self.log.lastLogIndex:
-                next_to_send = self.log.entry_at(self.matchIndex[msg.frm] + 1)
-                prevLogIndex = self.matchIndex[msg.frm]
-                prevLogTerm = self.log.entry_term(prevLogIndex)
-                self.outbox.append(
-                    Message(
-                        frm=self.name,
-                        to=msg.frm,
-                        cmd=AppendEntries(
-                            term=self.currentTerm,
-                            leaderId=self.name,
-                            prevLogIndex=prevLogIndex,
-                            prevLogTerm=prevLogTerm,
-                            leaderCommit=0,
-                            entries=[next_to_send],
-                        ),
-                    )
-                )
-
-        if isinstance(msg.cmd, AppendEntriesFailed):
-            self.nextIndex[msg.frm] = max(self.nextIndex[msg.frm] - 1, 1)
-            index_to_resend = self.nextIndex[msg.frm]
-            print(f"{msg.frm} failed, resending entry at {index_to_resend}")
-            prevLogIndex = index_to_resend - 1
-            prevLogTerm = self.log.entry_term(prevLogIndex)
-            self.outbox.append(
-                Message(
-                    frm=self.name,
-                    to=msg.frm,
-                    cmd=AppendEntries(
-                        term=self.currentTerm,
-                        leaderId=self.name,
-                        prevLogIndex=prevLogIndex,
-                        prevLogTerm=prevLogTerm,
-                        leaderCommit=0,
-                        entries=[self.log.entry_at(index_to_resend)],
-                    ),
-                )
-            )
-
-    def _handle_client_set(self, cmd: str):
-        prevLogIndex = self.log.lastLogIndex
-        prevLogTerm = self.log.last_log_term
-        new_entry = Entry(term=self.currentTerm, cmd=cmd)
-        assert self.log.add_entry(
-            entry=new_entry,
-            prevLogIndex=prevLogIndex,
-            prevLogTerm=prevLogTerm,
-            leaderCommit=1,
-        )
-        print(f"server added {cmd} at position {prevLogIndex + 1}")
-        ae = AppendEntries(
-            term=self.currentTerm,
-            leaderId=self.name,
-            prevLogIndex=prevLogIndex,
-            prevLogTerm=prevLogTerm,
-            leaderCommit=0,
-            entries=[new_entry],
-        )
-        self.outbox.extend(
-            Message(frm=self.name, to=s, cmd=ae) for s in self.peers if s != self.name
-        )
-
+        self._setup_follower_tracking_indexes()
