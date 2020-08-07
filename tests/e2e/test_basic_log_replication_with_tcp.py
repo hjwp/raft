@@ -50,7 +50,7 @@ def test_replication_with_tcp_servers():
         votedFor=None,
     )
 
-    client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("gherkins=4"))
+    client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand(guid='guid', cmd="gherkins=4"))
 
     leadernet = networks["S1"]
     f1net = networks["S2"]

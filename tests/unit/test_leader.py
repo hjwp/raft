@@ -24,7 +24,7 @@ def test_handle_client_set_updates_local_log_and_puts_AppendEntries_in_outbox():
     log = InMemoryLog(old_entries)
     s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=2, votedFor=None)
 
-    s.handle_message(Message(frm="client.id", to="S1", cmd=ClientSetCommand("foo=bar")))
+    s.handle_message(Message(frm="client.id", to="S1", cmd=ClientSetCommand(guid='gaga', cmd="foo=bar")))
     expected_entry = Entry(term=2, cmd="foo=bar")
     assert s.log.read() == old_entries + [expected_entry]
     expected_appendentries = AppendEntries(

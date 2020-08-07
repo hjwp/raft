@@ -1,9 +1,6 @@
-election timeout and transition to candidate
-    - Roles?
-    - self.__class__ ?
 commit index
+kvstore
 convert to appenendtries being a list.
-
 add a RaftCluster thingie for testing that wraps Raftnets
-tricker unit/e2e test case for log replication?
+fix bug in election/replaction found in test_elections_multiple_servers.py
 stop using pickle

@@ -24,7 +24,7 @@ def test_replication_one_server_simple_case():
         currentTerm=1,
         votedFor=None,
     )
-    client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("foo=1"))
+    client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand(guid='gooey', cmd="foo=1"))
 
     raftnet = FakeRaftNetwork([])
     raftnet.dispatch(client_set)
@@ -46,7 +46,7 @@ def test_replication_multiple_servers_simple_case():
         name="S3", peers=peers, now=1, log=InMemoryLog([]), currentTerm=1, votedFor=None
     )
 
-    client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("foo=1"))
+    client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand(guid='gooey', cmd="foo=1"))
 
     raftnet = FakeRaftNetwork([])
     raftnet.dispatch(client_set)
@@ -89,7 +89,7 @@ def test_replication_backtracking():
         votedFor=None,
     )
 
-    client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand("gherkins=4"))
+    client_set = Message(frm="client.id", to="S1", cmd=ClientSetCommand(guid='gooey', cmd="gherkins=4"))
 
     raftnet = FakeRaftNetwork([])
     raftnet.dispatch(client_set)

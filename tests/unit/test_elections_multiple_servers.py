@@ -34,13 +34,13 @@ def test_simple_election():
 
 @pytest.mark.xfail
 def test_figure_7_elections_always_get_committed_logs():
-    for _ in range(50):  # do this lots of times to get a few random outcomes
+    for _ in range(10):  # do this lots of times to get a few random outcomes
         servers = figure_7.make_servers()
         del servers['l']   # oh noes, what will they do without a leader???
 
         raftnet = FakeRaftNetwork([])
         start_ms = int(MIN_ELECTION_TIMEOUT * 1000) - 1
-        for i in range(start_ms, start_ms * 20):
+        for i in range(start_ms, start_ms * 10):
             # print(f"*** --- CLOCK TIIIIICK {i} --- ***")
             for _, s in servers.items():
                 clock_tick(s, raftnet, i / 1000.0)

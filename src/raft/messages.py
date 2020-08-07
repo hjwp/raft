@@ -5,6 +5,7 @@ from raft.log import Entry
 
 @dataclass
 class ClientSetCommand:
+    guid: str
     cmd: str
 
 
