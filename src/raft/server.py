@@ -175,24 +175,10 @@ class Leader(Server):
     def _handleAppendEntriesSucceeded(self, frm: str, cmd: AppendEntriesSucceeded):
         self.matchIndex[frm] = cmd.matchIndex
         self.nextIndex[frm] = cmd.matchIndex + 1
+        print(self.matchIndex)
         if self.matchIndex[frm] < self.log.lastLogIndex:
-            next_to_send = self.log.entry_at(self.matchIndex[frm] + 1)
-            prevLogIndex = self.matchIndex[frm]
-            prevLogTerm = self.log.entry_term(prevLogIndex)
-            self.outbox.append(
-                Message(
-                    frm=self.name,
-                    to=frm,
-                    cmd=AppendEntries(
-                        term=self.currentTerm,
-                        leaderId=self.name,
-                        prevLogIndex=prevLogIndex,
-                        prevLogTerm=prevLogTerm,
-                        leaderCommit=0,
-                        entries=[next_to_send],
-                    ),
-                )
-            )
+            self._send_next_entry(frm)
+        self._commit_if_possible(cmd.matchIndex)
 
     def _handleAppendEntriesFailed(self, frm: str):
         self.nextIndex[frm] = max(self.nextIndex[frm] - 1, 1)
@@ -211,6 +197,43 @@ class Leader(Server):
                     prevLogTerm=prevLogTerm,
                     leaderCommit=0,
                     entries=[self.log.entry_at(index_to_resend)],
+                ),
+            )
+        )
+
+    def _commit_if_possible(self, matchIndex: int):
+        if self.commitIndex > matchIndex:
+            return
+        if self._have_quorum_at(matchIndex):
+            self.commitIndex += 1
+            # TODOs:
+            # self.log.apply_state_machine_up_to(self.commitIndex)
+            # self._send_any_pending_client_responses()
+
+
+    def _have_quorum_at(self, matchIndex) -> bool:
+        quorum = len(self.peers) // 2
+        matching_follwers = len(
+            [f for f, ix in self.matchIndex.items() if ix >= matchIndex]
+        )
+        me = 1
+        return (matching_follwers + me) > quorum
+
+    def _send_next_entry(self, follower: str):
+        next_to_send = self.log.entry_at(self.matchIndex[follower] + 1)
+        prevLogIndex = self.matchIndex[follower]
+        prevLogTerm = self.log.entry_term(prevLogIndex)
+        self.outbox.append(
+            Message(
+                frm=self.name,
+                to=follower,
+                cmd=AppendEntries(
+                    term=self.currentTerm,
+                    leaderId=self.name,
+                    prevLogIndex=prevLogIndex,
+                    prevLogTerm=prevLogTerm,
+                    leaderCommit=0,
+                    entries=[next_to_send],
                 ),
             )
         )
