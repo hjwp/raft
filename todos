@@ -1,6 +1,5 @@
-commit index
 kvstore
-convert to appenendtries being a list.
+convert to AppendEntries being a list.
 add a RaftCluster thingie for testing that wraps Raftnets
 fix bug in election/replaction found in test_elections_multiple_servers.py
 stop using pickle
@@ -11,3 +10,8 @@ src/raft/log.py:        leaderCommit: int,  # 1-based, ignored for now.  # TODO:
 src/raft/server.py:        if False:  # TODO:
 src/raft/server.py:            # TODOs:
 src/raft/server.py:        # TODO: this log.check_log() is rough.
+
+xfails:
+def test_client_gets_response_but_only_when_new_entry_is_on_a_majority_of_servers():
+def test_figure_7_elections_always_get_committed_logs():
+def test_duplicate_failed_appendentries_do_not_double_decrement_or_double_reappend():
