@@ -283,10 +283,11 @@ def test_heartbeat_only_appears_once_per_interval():
     s.clock_tick(next_one)
     assert len(s.outbox) == 8
 
-@pytest.mark.xfail
-def test_becoming_follower_should_reset_matchindex_and_nextIndex(self):
-    assert 0, 'todo'
 
-@pytest.mark.xfail
-def test_becoming_leader_should_reset_matchindex_and_nextIndex(self):
-    assert 0, 'todo'
+def test_becoming_follower_should_reset_matchindex_and_nextIndex():
+    s = Leader(name="S1", now=1, log=InMemoryLog([]), peers=["S1", "S2"], currentTerm=1, votedFor=None)
+    s.matchIndex["S2"] = 99
+    s.nextIndex["S2"] = 99
+    s._become_follower()
+    assert s.matchIndex == {}
+    assert s.nextIndex == {}

@@ -84,6 +84,11 @@ class Leader(Server):
         super().__init__(name, peers, now, log, currentTerm, votedFor)
         self._setup_follower_tracking_indexes()
 
+    def _become_follower(self) -> None:
+        super()._become_follower()
+        self.matchIndex.clear()
+        self.nextIndex.clear()
+
     def _setup_follower_tracking_indexes(self) -> None:
         # Raft leader volatile state
         self.nextIndex = {
