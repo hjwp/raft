@@ -21,11 +21,11 @@ def test_simple_election():
     f1, f2, f3 = [make_follower(n, peers) for n in peers]
 
     raftnet = FakeRaftNetwork([])
-    for i in range(1, 100):  # IDEA: while raftnet.messages?
+    for i in range(1, 300):  # IDEA: while raftnet.messages?
         print(f"*** --- CLOCK TIIIIICK {i} --- ***")
-        clock_tick(f1, raftnet, i / 100)
-        clock_tick(f2, raftnet, i / 100)
-        clock_tick(f3, raftnet, i / 100)
+        clock_tick(f1, raftnet, i / 1000)
+        clock_tick(f2, raftnet, i / 1000)
+        clock_tick(f3, raftnet, i / 1000)
 
     assert any(isinstance(f, Leader) for f in [f1, f2, f3])
 

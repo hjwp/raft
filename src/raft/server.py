@@ -58,11 +58,6 @@ class Server:
     def clock_tick(self, now: float):
         raise NotImplementedError
 
-    def _become_candidate(self) -> None:
-        print(f'** {self.name} is becoming Candidate **')
-        self.__class__ = Candidate
-        self._call_election()  # pylint: disable=no-member
-
     def _become_follower(self) -> None:
         print(f'** {self.name} is becoming a Follower **')
         self.__class__ = Follower
@@ -202,6 +197,7 @@ class Follower(Server):
 
     def clock_tick(self, now: float):
         if now > self._election_timeout:
+            print(f'election timeout!  {now} was greater than {self._election_timeout}')
             self._reset_election_timeout(now)
             self._become_candidate()
 
@@ -247,9 +243,8 @@ class Follower(Server):
 
 
     def _handle_AppendEntries(self, frm: str, cmd: AppendEntries) -> None:
-        if not self.log.check_log(
-            cmd.prevLogIndex, cmd.prevLogTerm
-        ):  # TODO: this is rough. lets convert to appendentries taking a list.
+        # TODO: this is rough. lets convert to appendentries taking a list.
+        if not self.log.check_log(cmd.prevLogIndex, cmd.prevLogTerm):
             self.outbox.append(
                 Message(
                     frm=self.name,
@@ -269,6 +264,12 @@ class Follower(Server):
                 cmd=AppendEntriesSucceeded(matchIndex=self.log.lastLogIndex),
             )
         )
+
+    def _become_candidate(self) -> None:
+        print(f'** {self.name} is becoming Candidate **')
+        self.__class__ = Candidate
+        self._call_election()  # pylint: disable=no-member
+
 
 
 class Candidate(Server):

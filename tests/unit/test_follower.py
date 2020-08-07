@@ -50,6 +50,7 @@ def test_append_entries_with_no_entry_aka_heartbeat_at_zero():
         currentTerm=1,
         votedFor=None,
     )
+    old_timeout = s._election_timeout
     s.handle_message(
         Message(
             frm="S1",
@@ -67,6 +68,7 @@ def test_append_entries_with_no_entry_aka_heartbeat_at_zero():
     assert s.log.read() == []
     expected_response = AppendEntriesSucceeded(matchIndex=0)
     assert s.outbox == [Message(frm="S2", to="S1", cmd=expected_response)]
+    assert s._election_timeout > old_timeout
 
 
 def test_append_entries_with_no_entry_aka_heartbeat_at_nonzero():
