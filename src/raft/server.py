@@ -7,6 +7,7 @@ from raft.messages import (
     AppendEntriesSucceeded,
     AppendEntriesFailed,
     ClientSetCommand,
+    ClientSetSucceeded,
     RequestVote,
     VoteGranted,
     VoteDenied,
@@ -130,7 +131,7 @@ class Leader(Server):
 
     def _handle_message(self, msg: Message) -> None:
         if isinstance(msg.cmd, ClientSetCommand):
-            self._handle_client_set(cmd=msg.cmd.cmd)
+            self._handleClientSetCommand(frm=msg.frm, cmd=msg.cmd)
 
         if isinstance(msg.cmd, AppendEntriesSucceeded):
             self.matchIndex[msg.frm] = msg.cmd.matchIndex
@@ -175,10 +176,10 @@ class Leader(Server):
                 )
             )
 
-    def _handle_client_set(self, cmd: str):
+    def _handleClientSetCommand(self, frm: str, cmd: ClientSetCommand):
         prevLogIndex = self.log.lastLogIndex
         prevLogTerm = self.log.last_log_term
-        new_entry = Entry(term=self.currentTerm, cmd=cmd)
+        new_entry = Entry(term=self.currentTerm, cmd=cmd.cmd)
         assert self.log.add_entry(
             entry=new_entry,
             prevLogIndex=prevLogIndex,
@@ -197,6 +198,10 @@ class Leader(Server):
         self.outbox.extend(
             Message(frm=self.name, to=s, cmd=ae) for s in self.peers if s != self.name
         )
+        if False: # TODO:
+            self.outbox.append(
+                Message(frm=self.name, to=frm, cmd=ClientSetSucceeded(guid=cmd.guid))
+            )
 
 
 
