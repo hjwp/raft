@@ -4,3 +4,10 @@ convert to appenendtries being a list.
 add a RaftCluster thingie for testing that wraps Raftnets
 fix bug in election/replaction found in test_elections_multiple_servers.py
 stop using pickle
+
+src/raft/adapters/network.py:    result = pickle.loads(raw)  # TODO: messages include user-submitted data. so this is terrible
+src/raft/adapters/network.py:        assert to == self.name  # TODO: this argument is only really needed so 1 FakeRaftNetwork can be shared amongst multiple servers. eh.
+src/raft/log.py:        leaderCommit: int,  # 1-based, ignored for now.  # TODO: remove?
+src/raft/server.py:        if False:  # TODO:
+src/raft/server.py:            # TODOs:
+src/raft/server.py:        # TODO: this log.check_log() is rough.
