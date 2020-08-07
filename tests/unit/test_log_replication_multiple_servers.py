@@ -1,10 +1,11 @@
 import pytest
-from typing import List
 from raft.adapters.network import FakeRaftNetwork
 from raft.adapters.run_server import clock_tick
 from raft.log import InMemoryLog, Entry
 from raft.messages import Message, ClientSetCommand
 from raft.server import Leader, Follower, HEARTBEAT_FREQUENCY
+import figure_7
+
 
 def test_replication_one_server_simple_case():
     leader = Leader(
@@ -107,30 +108,7 @@ def test_replication_backtracking():
 
 
 def test_figure_seven_from_paper():
-    logs_from_paper_str = '''
-        l,1114455666
-        a,111445566
-        b,1114
-        c,11144556666
-        d,111445566677
-        e,1114444
-        f,11122233333
-    '''
-    servers = {}
-    peers = [c for c in 'labcdef']
-    for line in logs_from_paper_str.strip().splitlines():
-        name, _, entries = line.strip().partition(',')
-        log = InMemoryLog([
-            Entry(term=int(c), cmd=f'foo={c}')
-            for c in entries
-        ])
-        args = dict(
-            name=name, peers=peers, now=0, log=log, currentTerm=int(entries[-1]), votedFor=None
-        )
-        if name == 'l':
-            servers[name] = Leader(**args)
-        else:
-            servers[name] = Follower(**args)
+    servers = figure_7.make_servers()
     print(servers)
 
     raftnet = FakeRaftNetwork([])
