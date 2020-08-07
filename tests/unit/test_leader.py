@@ -291,3 +291,23 @@ def test_becoming_follower_should_reset_matchindex_and_nextIndex():
     s._become_follower()
     assert s.matchIndex == {}
     assert s.nextIndex == {}
+
+
+def test_updates_commitIndex_on_quorum_AppendEntriesSucceeded():
+    peers = ["S1", "S2", "S3", "S4", "S5"]
+    old_entries = [Entry(term=1, cmd="old=1"), Entry(term=2, cmd="old=2")]
+    log = InMemoryLog(old_entries)
+    s = Leader(name="S1", now=1, log=log, peers=peers, currentTerm=1, votedFor=None)
+    assert s.commitIndex == 0
+    s.handle_message(
+        Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=1))
+    )
+    assert s.commitIndex == 0
+    s.handle_message(
+        Message(frm="S2", to="S1", cmd=AppendEntriesSucceeded(matchIndex=2))
+    )
+    assert s.commitIndex == 0
+    s.handle_message(
+        Message(frm="S3", to="S1", cmd=AppendEntriesSucceeded(matchIndex=1))
+    )
+    assert s.commitIndex == 1
