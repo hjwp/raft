@@ -4,7 +4,7 @@ from raft.adapters.network import FakeRaftNetwork
 from raft.adapters.run_server import clock_tick
 from raft.log import InMemoryLog, Entry
 from raft.messages import Message, ClientSetCommand
-from raft.server import Leader, Follower
+from raft.server import Leader, Follower, HEARTBEAT_FREQUENCY
 
 def test_replication_one_server_simple_case():
     leader = Leader(
@@ -104,3 +104,45 @@ def test_replication_backtracking():
     assert leader.log.read() == expected
     assert f1.log.read() == expected
     assert f2.log.read() == expected
+
+
+@pytest.mark.xfail
+def test_figure_seven_from_paper():
+    logs_from_paper_str = '''
+        l,1114455666
+        a,111445566
+        b,1114
+        c,11144556666
+        d,111445566677
+        e,1114444
+        f,11122233333
+    '''
+    servers = {}
+    peers = [c for c in 'labcdef']
+    for line in logs_from_paper_str.strip().splitlines():
+        name, _, entries = line.strip().partition(',')
+        log = InMemoryLog([
+            Entry(term=int(c), cmd=f'foo={c}')
+            for c in entries
+        ])
+        args = dict(
+            name=name, peers=peers, now=0, log=log, currentTerm=int(entries[-1]), votedFor=None
+        )
+        if name == 'l':
+            servers[name] = Leader(**args)
+        else:
+            servers[name] = Follower(**args)
+    print(servers)
+
+    raftnet = FakeRaftNetwork([])
+    one_heartbeat_in = HEARTBEAT_FREQUENCY + 0.0001
+
+    for i in range(1, 100):
+        print(f"*** --- CLOCK TIIIIICK {i} --- ***")
+        for _, s in servers.items():
+            clock_tick(s, raftnet, one_heartbeat_in + i / 1000.0)
+
+    for n, s in servers.items():
+        print(f'Checking log for server {n}: {s.log.read()}')
+        terms = [e.term for e in s.log.read()]
+        assert terms == list(map(int, '1114455666'))

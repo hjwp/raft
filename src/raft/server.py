@@ -12,7 +12,7 @@ from raft.messages import (
     VoteDenied,
 )
 
-HEARTBEAT_FREQUENCY = 0.2
+HEARTBEAT_FREQUENCY = 0.02
 MIN_ELECTION_TIMEOUT = 0.15
 ELECTION_TIMEOUT_JITTER = 0.15
 
@@ -43,11 +43,15 @@ class Server:
         self.commitIndex = 0
         self.lastApplied = 0
 
+    def __repr__(self):
+        return f'<{self.__class__.__name__}: term={self.currentTerm}, lastLogIndex={self.log.lastLogIndex}>'
+
     def _reset_election_timeout(self) -> None:
         jitter = random.randint(0, int(ELECTION_TIMEOUT_JITTER * 1000)) / 1000.0
         self._election_timeout = self.now + MIN_ELECTION_TIMEOUT + jitter
 
     def handle_message(self, msg: Message) -> None:
+        print(f"{self.name} handling {msg}")
         if hasattr(msg.cmd, 'term') and msg.cmd.term > self.currentTerm:
             self.currentTerm = msg.cmd.term
             self._become_follower()
@@ -88,6 +92,7 @@ class Leader(Server):
         }  # type: Dict[str, int]
 
     def _heartbeat_for(self, follower) -> AppendEntries:
+        print(f'making heartbeat for {follower}')
         prevLogIndex = self.nextIndex[follower] - 1
         prevLogTerm = self.log.entry_term(prevLogIndex)
         return AppendEntries(
@@ -123,7 +128,6 @@ class Leader(Server):
             )
 
     def _handle_message(self, msg: Message) -> None:
-        print(f"{self.name} handling {msg.cmd.__class__.__name__} from {msg.frm}")
         if isinstance(msg.cmd, ClientSetCommand):
             self._handle_client_set(cmd=msg.cmd.cmd)
 
@@ -208,7 +212,6 @@ class Follower(Server):
     def _handle_message(self, msg: Message) -> None:
         if isinstance(msg.cmd, AppendEntries):
             kvcmd = msg.cmd.entries[0].cmd if msg.cmd.entries else "HeArtBeAt"
-            print(f"{self.name} handling AppendEntries({kvcmd}) from {msg.frm}")
             self._handle_AppendEntries(frm=msg.frm, cmd=msg.cmd)
 
         if isinstance(msg.cmd, RequestVote):

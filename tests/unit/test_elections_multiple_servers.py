@@ -29,4 +29,3 @@ def test_simple_election():
         clock_tick(f3, raftnet, i / 1000)
 
     assert any(isinstance(f, Leader) for f in [f1, f2, f3])
-
