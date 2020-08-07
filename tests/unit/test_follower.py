@@ -44,6 +44,39 @@ def test_append_entries_adds_to_local_log_and_returns_success_response():
     assert s._election_timeout > old_timeout
 
 
+def test_append_entries_success_returns_matchindex_at_given_position():
+    log = InMemoryLog([
+        Entry(term=1, cmd='cmd=1'),
+        Entry(term=1, cmd='cmd=2'),
+    ])
+    s = Follower(
+        name="S2",
+        peers=["S1", "S2", "S3"],
+        now=1,
+        log=log,
+        currentTerm=1,
+        votedFor=None,
+    )
+    new_entry = Entry(term=1, cmd="cmd=3")
+    s.now = 2
+    s.handle_message(
+        Message(
+            frm="S1",
+            to="S2",
+            cmd=AppendEntries(
+                term=1,
+                leaderId="S1",
+                prevLogIndex=2,
+                prevLogTerm=1,
+                leaderCommit=0,
+                entries=[new_entry],
+            ),
+        )
+    )
+    expected_response = AppendEntriesSucceeded(matchIndex=3)
+    assert s.outbox == [Message(frm="S2", to="S1", cmd=expected_response)]
+
+
 def test_append_entries_with_no_entry_aka_heartbeat_at_zero():
     log = InMemoryLog([])
     s = Follower(
@@ -77,7 +110,7 @@ def test_append_entries_with_no_entry_aka_heartbeat_at_zero():
 
 
 def test_append_entries_with_no_entry_aka_heartbeat_at_nonzero():
-    log = InMemoryLog([Entry(term=1, cmd="foo=1")])
+    log = InMemoryLog([Entry(term=1, cmd="foo=1"), Entry(term=1, cmd="foo=2")])
     s = Follower(
         name="S2",
         peers=["S1", "S2", "S3"],
@@ -93,14 +126,42 @@ def test_append_entries_with_no_entry_aka_heartbeat_at_nonzero():
             cmd=AppendEntries(
                 term=1,
                 leaderId="S1",
-                prevLogIndex=1,
+                prevLogIndex=2,
                 prevLogTerm=1,
-                leaderCommit=1,
+                leaderCommit=0,
                 entries=[],
             ),
         )
     )
-    expected_response = AppendEntriesSucceeded(matchIndex=1)
+    expected_response = AppendEntriesSucceeded(matchIndex=2)
+    assert s.outbox == [Message(frm="S2", to="S1", cmd=expected_response)]
+
+
+def test_append_entries_heartbeat_in_middle_of_log_returns_matchindex_at_that_position():
+    log = InMemoryLog([Entry(term=1, cmd="foo=1"), Entry(term=1, cmd="foo=2"), Entry(term=1, cmd='foo=3')])
+    s = Follower(
+        name="S2",
+        peers=["S1", "S2", "S3"],
+        now=1,
+        log=log,
+        currentTerm=1,
+        votedFor=None,
+    )
+    s.handle_message(
+        Message(
+            frm="S1",
+            to="S2",
+            cmd=AppendEntries(
+                term=1,
+                leaderId="S1",
+                prevLogIndex=2,
+                prevLogTerm=1,
+                leaderCommit=0,
+                entries=[],
+            ),
+        )
+    )
+    expected_response = AppendEntriesSucceeded(matchIndex=2)
     assert s.outbox == [Message(frm="S2", to="S1", cmd=expected_response)]
 
 

@@ -261,15 +261,17 @@ class Follower(Server):
             )
             return
         self._reset_election_timeout()
+        matchIndex = cmd.prevLogIndex
         for entry in cmd.entries:
             assert self.log.add_entry(
                 entry, cmd.prevLogIndex, cmd.prevLogTerm, cmd.leaderCommit
             )
+            matchIndex += 1
         self.outbox.append(
             Message(
                 frm=self.name,
                 to=frm,
-                cmd=AppendEntriesSucceeded(matchIndex=self.log.lastLogIndex),
+                cmd=AppendEntriesSucceeded(matchIndex=matchIndex),
             )
         )
 
